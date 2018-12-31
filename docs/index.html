@@ -1,0 +1,129 @@
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js" integrity="sha256-t7CAuaRhODo/cv00lxyONppujwTFFwUWGkrhD/UB1qM=" crossorigin="anonymous"></script>
+</head>
+
+<body>
+  <style>
+    body {
+      background-color: #ebebeb;
+    }
+    .description {
+      width: 800px;
+      margin-left: 40px;
+      margin-top: 20px;
+    }
+
+    .filter {
+      width: 800px;
+      margin-left: 40px;
+    }
+  </style>
+
+  <div class="content">
+    <div class="description">
+      <h3>Dstats from TechEmpower Benchmarks</h3>
+      <p>Box plot per framework for memory usage and load averages (1min) from a filtered results.zip downloaded from the <a href="https://tfb-status.techempower.com/results/56076e97-0658-46a1-81bb-6f8890f2e85e">TechEmpower continuous results site 2018-10-30 result.</a></p>
+    </div>
+
+    <div class="filter">
+      <label for="testtype">Test type</label>
+      <select id="testtype" onchange="window.testTypeChanged()">
+        <option>fortune</option>
+        <option>plaintext</option>
+        <option>json</option>
+      </select>
+    </div>
+
+    <div id="chart"></div>
+  </div>
+
+</body>
+
+<script>
+
+  window.data = {};
+
+  function chartData(testtype) {
+    testtype = testtype || 'fortune';
+    console.log('Charting ', testtype);
+    var testdata = window.data[testtype];
+    console.log('Found test data: ', testdata);
+
+    // Get min and max RPS for colors
+    var maxRPS = 0;
+    for (var framework in testdata) {
+      var rps = testdata[framework].reqPerSec;
+      maxRPS = rps > maxRPS ? rps : maxRPS;
+    }
+    var minRPS = maxRPS/10;
+
+    // Get data - memory usage box plots
+    var data = [];
+    for (var framework in testdata) {
+      var testResults = testdata[framework];
+      data.push({
+        x: testResults.loadAverages,//.map(it => it/1000000),
+        requests_per_second: testResults.reqPerSec,
+        type: 'box',
+        name: framework
+      });
+    }
+
+    data.sort((a, b) => a.requests_per_second < b.requests_per_second);
+    data = data.slice(0, 100);
+    data.reverse();
+
+    // Set colors based on RPS
+    for (var i = 0; i < data.length; i++) {
+      var datum = data[i];
+      var percentRPS = (datum.requests_per_second - minRPS) / (maxRPS - minRPS);
+      var colorHSL = percentRPS * 360;
+      var result = `hsl(${colorHSL}, 50%, 50%)`;
+      datum.marker = { color: result };
+    }
+
+    var layout = {
+      height: 4000,
+      width: 1000,
+      legend: { traceorder: "reversed" },
+      xaxis: {
+        title: 'Load Averages (1min)',
+        tickangle: 45,
+        side: 'top'
+      },
+      yaxis: {
+        zeroline: false,
+        gridcolor: 'white',
+      },
+      margin: {
+        t: 100,
+        l: 150
+      },
+      paper_bgcolor: 'rgb(233,233,233)',
+      plot_bgcolor: 'rgb(233,233,233)',
+      showlegend: true
+    };
+
+    console.log('Charting: ', data, layout);
+    Plotly.newPlot('chart', data, layout);
+  }
+
+  function testTypeChanged() {
+    var option = document.getElementById('testtype').value;
+    console.log('Chosen test type is ', option);
+    chartData(option);
+  }
+
+  fetch('filtered.json')
+  .then(response => response.json())
+  .then(data => {
+    console.log("Got data: ", data);
+    window.data = data;
+    testTypeChanged();
+  });
+</script>
+</html>
