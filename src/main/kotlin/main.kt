@@ -8,7 +8,8 @@ import java.nio.file.Paths
 import java.util.stream.Collectors
 
 data class DstatHeader(val category: String, val header: String)
-data class FrameworkTestResult(val reqPerSec: Double, val memoryUsages: List<Double>, val loadAverages: List<Double>)
+data class RpsAndLatencyStat(val requestsPerSecond: Double, val latencyAverageMs: Double, val latencyStandardDeviationMs: Double, val latencyMaxMs: Double)
+data class FrameworkTestResult(val rpsAndLatency: RpsAndLatencyStat, val memoryUsages: List<Double>, val loadAverages: List<Double>)
 class BadDataException(override val message: String) : Exception(message)
 
 fun Collection<Double>.median(): Double? {
@@ -16,7 +17,14 @@ fun Collection<Double>.median(): Double? {
         return null
 
     val sorted = this.sorted()
-    return sorted[sorted.count() / 2]
+    return if (sorted.size % 2 == 0) {
+        val floatSize = sorted.size.toDouble()
+        val midHigh = Math.ceil(floatSize / 2.0)
+        val midLow = Math.floor(floatSize / 2.0)
+        (sorted[midHigh.toInt()] + sorted[midLow.toInt()]) / 2.0
+    } else {
+        sorted[sorted.size / 2]
+    }
 }
 
 fun getVerifiedStatus(filePath: String): Boolean {
@@ -57,14 +65,36 @@ fun getDstatColumnMap(filePath: String): Map<DstatHeader, List<String>> {
     return columns
 }
 
-fun getRPS(filePath: String): Double {
+fun getMilliseconds(number: String): Double {
+    when {
+        number.endsWith("ms") -> return number.substring(0, number.length - 2).toDouble()
+        number.endsWith("us") -> return number.substring(0, number.length - 2).toDouble() * 0.001
+        number.endsWith("s") -> return number.substring(0, number.length - 1).toDouble() * 1000
+        else -> throw BadDataException("Cannot get milliseconds from $number")
+    }
+}
+
+fun getRpsAndLatencyStat(filePath: String): RpsAndLatencyStat {
     val text = File(filePath).readText()
-    val matches = Regex("""Requests/sec: +([\d.]+)""").findAll(text).toList()
-    return matches
-        .drop(2) // drop the first two tests: primer and warm up tests
-        .map { it.groups.drop(1).first()!!.value.toDouble() }.toList()
-        .max() ?: throw BadDataException("No data to take max of")
-        // would prefer median, but it looks like TechEmpower uses the max
+    val concurrencyRuns = text
+        .split("\n---------------------------------------------------------")
+        .filter { it.lines().last().startsWith("ENDTIME") }
+
+    val numRegex = """\d+\.\d\d"""
+    val timeRegex = """$numRegex(us|ms|s)"""
+    val rpsRegex = """Requests/sec: +($numRegex)"""
+    val latencyRegex = """Latency +$timeRegex +$timeRegex +$timeRegex"""
+
+    val finds = concurrencyRuns
+        .map {
+            val rpsFind = Regex(rpsRegex).find(it)?.groups?.drop(1)?.first()?.value ?: throw BadDataException("Could not get RPS line")
+            val latFind = Regex(latencyRegex).find(it)?.groups?.first()?.value ?: throw BadDataException("Could not get latency line")
+            val lats = latFind.split(" ").filter { it.isNotEmpty() }.drop(1).toList()
+            RpsAndLatencyStat(rpsFind.toDouble(), getMilliseconds(lats[0]), getMilliseconds(lats[1]), getMilliseconds(lats[2]))
+        }
+        .toList()
+
+    return finds.maxBy { it.requestsPerSecond } ?: throw BadDataException("Failed to get max requests per second")
 }
 
 fun getFilteredResults(resultDirPath: Path): Map<String, Map<String, FrameworkTestResult>> {
@@ -86,8 +116,8 @@ fun getFilteredResults(resultDirPath: Path): Map<String, Map<String, FrameworkTe
                     val columns = getDstatColumnMap("$testDir/stats.txt")
                     val memoryUsages = columns[DstatHeader("memory usage", "used")]!!.map { it.toDouble() }.toList()
                     val loadAverages = columns[DstatHeader("load avg", "1m")]!!.map { it.toDouble() }.toList()
-                    val reqPerSec = getRPS("$testDir/raw.txt")
-                    testMap[frameworkDir.fileName.toString()] = FrameworkTestResult(reqPerSec, memoryUsages, loadAverages)
+                    val rpsAndLatency = getRpsAndLatencyStat("$testDir/raw.txt")
+                    testMap[frameworkDir.fileName.toString()] = FrameworkTestResult(rpsAndLatency, memoryUsages, loadAverages)
                 } catch (e: BadDataException) {
                     continue
                 }
@@ -117,8 +147,8 @@ fun main(args: Array<String>) {
     // just for fun...
     println("Top 20 frameworks")
     val fortunes = filteredResults["fortune"]!!
-    val top20 = fortunes.toList().sortedByDescending { it.second.reqPerSec }.take(20).toList()
-    for (top in top20) {
-        println("${top.first.padStart(20)} of ${top.second.reqPerSec} has ${top.second.memoryUsages.median()!! / 1_000_000 } MB and ${top.second.loadAverages.median()} load avg")
+    val top20 = fortunes.toList().sortedByDescending { (k, v) -> v.rpsAndLatency.requestsPerSecond }.take(20).toList()
+    for ((k, v) in top20) {
+        println("${k.padStart(20)} of ${v.rpsAndLatency.requestsPerSecond} has ${v.memoryUsages.median()!! / 1_000_000 } MB and ${v.loadAverages.median()} load avg")
     }
 }
