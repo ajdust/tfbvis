@@ -93,6 +93,7 @@
       });
 
     var rpsTrace = {
+      name: 'Requests per second',
       x: topFrameworks.map(framework => testdata[framework].rpsAndLatency.requestsPerSecond),
       y: topFrameworks,
       xaxis: 'x',
@@ -103,6 +104,7 @@
     };
 
     var memoryUsagesTrace = {
+      name: 'Median Memory Use (GB)',
       x: topFrameworks.map(framework => median(testdata[framework].memoryUsages.map(v => v/1000000000))),
       y: topFrameworks,
       type: 'bar',
@@ -113,6 +115,7 @@
     };
 
     var loadAveragesTrace = {
+      name: 'Median Load (Average 1m)',
       x: topFrameworks.map(framework => median(testdata[framework].loadAverages)),
       y: topFrameworks,
       type: 'bar',
@@ -123,6 +126,7 @@
     };
 
     var latencyAverageTrace = {
+      name: 'Average Latency (ms)',
       x: topFrameworks.map(framework => testdata[framework].rpsAndLatency.latencyAverageMs),
       y: topFrameworks,
       type: 'bar',
