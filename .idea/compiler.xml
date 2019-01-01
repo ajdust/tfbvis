@@ -2,8 +2,8 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel>
-      <module name="com.github.johnsabr.tebvis.tebvis.main" target="1.10" />
-      <module name="com.github.johnsabr.tebvis.tebvis.test" target="1.10" />
+      <module name="com.github.johnsabr.tfbvis.tfbvis.main" target="1.10" />
+      <module name="com.github.johnsabr.tfbvis.tfbvis.test" target="1.10" />
     </bytecodeTargetLevel>
   </component>
 </project>

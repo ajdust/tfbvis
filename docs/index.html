@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js" integrity="sha256-t7CAuaRhODo/cv00lxyONppujwTFFwUWGkrhD/UB1qM=" crossorigin="anonymous"></script>
+  <script src="util.js"></script>
+  <script src="tfb-lookup.js"></script>
 </head>
 
 <body>
@@ -11,15 +13,20 @@
     body {
       background-color: #ebebeb;
     }
+
     .description {
       width: 800px;
-      margin-left: 40px;
+      margin-left: 20px;
       margin-top: 20px;
     }
 
     .filter {
       width: 800px;
-      margin-left: 40px;
+      margin-left: 30px;
+    }
+
+    #chart {
+      margin-top: 20px;
     }
   </style>
 
@@ -45,13 +52,25 @@
 
 <script>
 
-  window.data = {};
+  window.fetchedData = {};
+
+  function median(a) {
+    if (a.length == 0) throw "Cannot take median of empty array";
+    var copy = a.slice();
+    copy.sort((a, b) => a < b);
+    if (copy.length % 2 === 0) {
+      var midLow = Math.floor(copy.length / 2);
+      var midHigh = Math.ceil(copy.length / 2);
+      return (copy[midLow] + copy[midHigh]) / 2;
+    } else {
+      return copy[Math.floor(copy.length / 2)];
+    }
+  }
 
   function chartData(testtype) {
     testtype = testtype || 'fortune';
-    console.log('Charting ', testtype);
-    var testdata = window.data[testtype];
-    console.log('Found test data: ', testdata);
+    var testdata = window.fetchedData[testtype];
+    console.log('Found ', testtype, 'data: ', testdata);
 
     // Get min and max RPS for colors
     var maxRPS = 0;
@@ -61,51 +80,95 @@
     }
     var minRPS = maxRPS/10;
 
-    // Get data - memory usage box plots
-    var data = [];
-    for (var framework in testdata) {
-      var testResults = testdata[framework];
-      data.push({
-        x: testResults.loadAverages,//.map(it => it/1000000),
-        requests_per_second: testResults.reqPerSec,
-        type: 'box',
-        name: framework
+    var frameworks = Object.keys(testdata);
+    var allRps = frameworks.map(framework => { return { name: framework, rps: testdata[framework].reqPerSec }; });
+    allRps.sort((a, b) => a.rps < b.rps);
+    var topFrameworks = allRps.slice(0, 100).map(v => v.name);
+    topFrameworks.reverse();
+
+    var colors = topFrameworks.map(framework => {
+        var maybeTest = lookup.tests(framework);
+        return maybeTest ?
+          maybeTest.attributes.language.opaque : 'rgb(122,122,122)';
       });
-    }
 
-    data.sort((a, b) => a.requests_per_second < b.requests_per_second);
-    data = data.slice(0, 100);
-    data.reverse();
+    var rpsTrace = {
+      x: topFrameworks.map(framework => testdata[framework].reqPerSec),
+      y: topFrameworks,
+      xaxis: 'x',
+      yaxis: 'y',
+      type: 'bar',
+      orientation: 'h',
+      marker: { color: colors }
+    };
 
-    // Set colors based on RPS
-    for (var i = 0; i < data.length; i++) {
-      var datum = data[i];
+    var loadAveragesTrace = {
+      x: topFrameworks.map(framework => median(testdata[framework].loadAverages)),
+      y: topFrameworks,
+      type: 'bar',
+      xaxis: 'x2',
+      yaxis: 'y',
+      orientation: 'h',
+      marker: { color: colors }
+    };
+
+    var memoryUsagesTrace = {
+      x: topFrameworks.map(framework => median(testdata[framework].memoryUsages.map(v => v/1000000000))),
+      y: topFrameworks,
+      type: 'bar',
+      xaxis: 'x3',
+      yaxis: 'y',
+      orientation: 'h',
+      marker: { color: colors }
+    };
+
+    // Set colors based on tfb-lookup,js
+    for (var i = 0; i < loadAveragesTrace.length; i++) {
+      var datum = loadAveragesTrace[i];
       var percentRPS = (datum.requests_per_second - minRPS) / (maxRPS - minRPS);
       var colorHSL = percentRPS * 360;
       var result = `hsl(${colorHSL}, 50%, 50%)`;
       datum.marker = { color: result };
     }
 
+    var data = [rpsTrace, loadAveragesTrace, memoryUsagesTrace];
     var layout = {
-      height: 4000,
-      width: 1000,
-      legend: { traceorder: "reversed" },
+      grid: {
+        rows: 1, columns: 3,
+        pattern: 'independent',
+        subplots: [
+          ['xy', 'x2y', 'x3y']
+        ],
+      },
+
+      height: 3000,
+      width: 1200,
       xaxis: {
-        title: 'Load Averages (1min)',
+        title: 'Requests per second (max)',
         tickangle: 45,
-        side: 'top'
+        side: 'top',
+      },
+      xaxis2: {
+        title: 'Load Average (1min %CPU)',
+        tickangle: 45,
+        side: 'top',
+      },
+      xaxis3: {
+        title: 'Memory Usage (GB)',
+        tickangle: 45,
+        side: 'top',
       },
       yaxis: {
         zeroline: false,
-        gridcolor: 'white',
+        gridcolor: '#cccccc',
       },
       margin: {
         t: 100,
-        l: 150
+        l: 170
       },
-      paper_bgcolor: 'rgb(233,233,233)',
-      plot_bgcolor: 'rgb(233,233,233)',
-      showlegend: true
+      paper_bgcolor: 'rgb(250,250,250)',
+      plot_bgcolor: 'rgb(250,250,250)',
+      showlegend: false
     };
 
     console.log('Charting: ', data, layout);
@@ -114,15 +177,18 @@
 
   function testTypeChanged() {
     var option = document.getElementById('testtype').value;
-    console.log('Chosen test type is ', option);
-    chartData(option);
+    try {
+      chartData(option);
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   fetch('filtered.json')
   .then(response => response.json())
-  .then(data => {
-    console.log("Got data: ", data);
-    window.data = data;
+  .then(fetchedData => {
+    console.log("Got data: ", fetchedData);
+    window.fetchedData = fetchedData;
     testTypeChanged();
   });
 </script>
