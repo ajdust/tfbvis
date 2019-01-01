@@ -57,7 +57,7 @@
   function median(a) {
     if (a.length == 0) throw "Cannot take median of empty array";
     var copy = a.slice();
-    copy.sort((a, b) => a < b);
+    copy.sort((a, b) => a < b ? -1 : 1);
     if (copy.length % 2 === 0) {
       var midLow = Math.floor(copy.length / 2);
       var midHigh = Math.ceil(copy.length / 2);
