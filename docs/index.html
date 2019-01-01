@@ -59,9 +59,7 @@
     var copy = a.slice();
     copy.sort((a, b) => a < b ? -1 : 1);
     if (copy.length % 2 === 0) {
-      var midLow = Math.floor(copy.length / 2);
-      var midHigh = Math.ceil(copy.length / 2);
-      return (copy[midLow] + copy[midHigh]) / 2;
+      return (copy[copy.length / 2] + copy[(copy.length / 2) - 1]) / 2.0;
     } else {
       return copy[Math.floor(copy.length / 2)];
     }

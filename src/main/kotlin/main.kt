@@ -18,10 +18,7 @@ fun Collection<Double>.median(): Double? {
 
     val sorted = this.sorted()
     return if (sorted.size % 2 == 0) {
-        val floatSize = sorted.size.toDouble()
-        val midHigh = Math.ceil(floatSize / 2.0)
-        val midLow = Math.floor(floatSize / 2.0)
-        (sorted[midHigh.toInt()] + sorted[midLow.toInt()]) / 2.0
+        (sorted[sorted.size / 2] + sorted[(sorted.size / 2) - 1]) / 2.0
     } else {
         sorted[sorted.size / 2]
     }
