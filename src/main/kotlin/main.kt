@@ -73,9 +73,10 @@ fun getMilliseconds(number: String): Double {
 
 fun getRpsAndLatencyStat(filePath: String): RpsAndLatencyStat {
     val text = File(filePath).readText()
+    // the primer and warm up tests do not have STARTTIME / ENDTIME lines
     val concurrencyRuns = text
         .split("\n---------------------------------------------------------")
-        .filter { it.lines().last().startsWith("ENDTIME") }
+        .filter { it.lines().last(String::isNotEmpty).startsWith("ENDTIME") }
 
     val numRegex = """\d+\.\d\d"""
     val timeRegex = """$numRegex(us|ms|s)"""
