@@ -33,7 +33,7 @@
   <div class="content">
     <div class="description">
       <h3>Dstats from TechEmpower Benchmarks</h3>
-      <p>Bar chart for requests per second / median memory usage / average latency from framework test results.zip downloaded from the <a href="https://tfb-status.techempower.com/results/ad7a361c-c4b7-4942-92f5-d9602804c96d">TechEmpower continuous results site 2018-12-29 result.</a> To save space, this is only showing the top 100 frameworks by requests per second with average latency below 100ms.</p>
+      <p>Bar chart for requests per second / median memory usage / average latency from framework test results.zip downloaded from the <a href="https://tfb-status.techempower.com/results/52587667-bee1-4b9b-b34d-929b616d5e4c">TechEmpower continuous results site 2019-06-08 result "Round 18".</a> This is only showing the top 500 frameworks by requests per second with average latency below 100ms. See the official visualization for <a href="https://www.techempower.com/benchmarks/">Round 18 here</a>.</p>
     </div>
 
     <div class="filter">
@@ -82,7 +82,7 @@
     allRps.sort((a, b) => a.rps < b.rps ? 1 : -1);
     var topFrameworks = allRps
       .filter(v => v.lavg < 100) // is it really top if average latency > 100ms?
-      .slice(0, 100)
+      .slice(0, 500)
       .map(v => v.name);
     topFrameworks.reverse();
 
@@ -146,7 +146,7 @@
         ],
       },
 
-      height: 3000,
+      height: 6000,
       width: 1200,
       xaxis: {
         title: 'Requests per second (max)',

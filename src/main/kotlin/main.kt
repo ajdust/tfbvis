@@ -128,7 +128,7 @@ fun getFilteredResults(resultDirPath: Path): Map<String, Map<String, FrameworkTe
 
 fun main(args: Array<String>) {
     val homePath = System.getProperty("user.home")
-    var inputResultDirPath = Paths.get("~/Downloads/results/20181226230340/".replaceFirst("~", homePath)).toAbsolutePath()
+    var inputResultDirPath = Paths.get("~/Documents/20190601080432/".replaceFirst("~", homePath)).toAbsolutePath()
     var outputJsonFilePath = Paths.get("docs/filtered.json".replaceFirst("~", homePath)).toAbsolutePath()
 
     if (args.size == 2) {
