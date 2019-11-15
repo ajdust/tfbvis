@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from pandas import DataFrame
+from pandas import DataFrame, read_csv
 from pyparsing import Word, Optional, nums, alphas, Group, Combine
 from typing import Dict, List
 import os
@@ -138,10 +138,10 @@ class LatencySummary(object):
 @dataclass
 class MemorySummary(object):
     avg: float = 0
-    stdev: float = 0
-    maxMem: float = 0
-    stdevRange: float = 0
     median: float = 0
+    maxMem: float = 0
+    stdev: float = 0
+    stdevRange: float = 0
 
 
 @dataclass
@@ -282,11 +282,42 @@ def getRpsAndLatency(filename: str):
     return sectionResults[-1]
 
 
+# Pulls stats CSV into a DataFrame
+def getStats(filename: str):
+    # Stats CSV has two headers after 4 information lines
+    header1 = ""
+    header2 = ""
+    with open(filename, "r") as csv:
+        for _ in range(4):
+            next(csv)
+        header1 = map(lambda x: x.strip('"'), csv.readline().strip().split(","))
+        header2 = map(lambda x: x.strip('"'), csv.readline().strip().split(","))
+
+    names = []
+    for h1, h2 in zip(header1, header2):
+        if h1:
+            lasth1 = h1
+            names.append((h1, h2))
+        else:
+            names.append((lasth1, h2))
+
+    return read_csv(filename, skiprows=6, names=names, index_col=[0, 1])
+
+
 def getMemoryUsage(filename: str):
-    # TODO: implement memory stats
-    # open dataframe from CSV - caveats: skipping first lines? double header?
-    # return df["memory-usage"].toStats()
-    pass
+    stats = getStats(filename)
+    memory = stats["memory usage", "used"]
+    mean = memory.mean()
+    stdev = memory.std()
+    return MemorySummary(
+        avg=mean,
+        median=memory.median(),
+        maxMem=memory.max(),
+        stdev=stdev,
+        stdevRange=100
+        * memory[(memory > mean - stdev) & (memory < mean + stdev)].count()
+        / memory.count(),
+    )
 
 
 def getTestResults(testDic: Dict[str, DataFrame]):
@@ -298,10 +329,11 @@ def getTestResults(testDic: Dict[str, DataFrame]):
                 continue
 
             rpsAndLatency = getRpsAndLatency(paths.rawPath)
+            memory = getMemoryUsage(paths.statsPath)
 
             # TODO: remove after testing
             print(framework)
-            print("   " + str(rpsAndLatency))
+            print("   " + str(memory))
             # TODO memoryUsage = getMemoryUsage(paths.statsPath)
 
         # testing...
