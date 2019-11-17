@@ -1,7 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict, is_dataclass
 from pandas import DataFrame, read_csv
 from pyparsing import Word, Optional, nums, alphas, Group, Combine
 from typing import Dict, List
+import json
+import numpy as np
 import os
 
 Integer = Word(nums)
@@ -11,57 +13,73 @@ FloatUnit = Group(Floating + Optional(Word(alphas)))
 Percent = Group(Floating + "%")
 
 
-def main(args):
+class EnhancedJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, np.integer):
+            return int(o)
+        elif isinstance(o, np.floating):
+            return float(o)
+        elif isinstance(o, np.ndarray):
+            return o.tolist()
+        elif is_dataclass(o):
+            return asdict(o)
+        return super().default(o)
 
+
+def main(args):
     # TODO: zip file unzipping/caching, zipfile = sys.argv[1]
-    testFiles = getTestResultFiles(args[0])
-    testResults = getTestResults(testFiles)
+    test_files = get_test_result_files(args[0])
+    test_results = get_test_results(test_files)
+    for testtype, results in test_results.items():
+        with open(f"docs/{testtype}.json", "w") as f:
+            print(f"Writing {testtype}.json")
+            f.write(json.dumps(results, cls=EnhancedJSONEncoder))
 
 
 @dataclass
 class TestFiles(object):
-    verificationPath: str = ""  # verification.txt
-    statsPath: str = ""  # stats.txt
-    rawPath: str = ""  # raw.txt
+    verification: str = ""  # verification.txt
+    stats: str = ""  # stats.txt
+    raw: str = ""  # raw.txt
 
 
-def getTestResultFiles(root: str) -> Dict[str, DataFrame]:
-    allowedTestTypes = set(["db", "fortune", "json", "plaintext", "query", "update"])
-    allowedFileNames = set(["verification.txt", "stats.txt", "raw.txt"])
+def get_test_result_files(root: str) -> Dict[str, DataFrame]:
+    allowed_test_types = {"db", "fortune", "json", "plaintext", "query", "update"}
+    allowed_file_names = {"verification.txt", "stats.txt", "raw.txt"}
     files = DataFrame(
         (
             (test, framework, file)
             for framework in next(os.walk(root))[1]
             for test in next(os.walk(os.path.join(root, framework)))[1]
-            if test in allowedTestTypes
+            if test in allowed_test_types
             for file in next(os.walk(os.path.join(root, framework, test)))[2]
-            if file in allowedFileNames
+            if file in allowed_file_names
         ),
         columns=["Test", "Framework", "File"],
     )
 
-    def toTestFiles(fwGrp) -> TestFiles:
-        verPath, statsPath, rawPath = "", "", ""
+    def to_test_files(fwGrp) -> TestFiles:
+        ver_path, stats_path, raw_path = "", "", ""
         for index, row in fwGrp.iterrows():
             fw, test, file = row["Framework"], row["Test"], row["File"]
             if file == "verification.txt":
-                verPath = os.path.join(root, fw, test, file)
+                ver_path = os.path.join(root, fw, test, file)
             elif file == "stats.txt":
-                statsPath = os.path.join(root, fw, test, file)
+                stats_path = os.path.join(root, fw, test, file)
             elif file == "raw.txt":
-                rawPath = os.path.join(root, fw, test, file)
-        return TestFiles(verificationPath=verPath, statsPath=statsPath, rawPath=rawPath)
+                raw_path = os.path.join(root, fw, test, file)
+        return TestFiles(verification=ver_path, stats=stats_path, raw=raw_path)
 
     return {
-        testType: files[files["Test"] == testType]
+        test_type: files[files["Test"] == test_type]
         .groupby("Framework")
-        .apply(toTestFiles)
+        .apply(to_test_files)
         .reset_index(name="Files")
-        for testType in allowedTestTypes
+        for test_type in allowed_test_types
     }
 
 
-def getVerification(filename: str):
+def get_verification(filename: str):
     with open(filename, "r") as verFile:
         for line in verFile:
             if line.startswith("   PASS for"):
@@ -69,41 +87,27 @@ def getVerification(filename: str):
         return False
 
 
-def getRpsAndLatencyParser():
-    numConnLine = Group(Integer + "threads and" + Integer + "connections;")
-    latencyLine = Group("Latency" + FloatUnit + FloatUnit + FloatUnit + Percent + ";")
-    reqSecLine = Group("Req/Sec" + FloatUnit + FloatUnit + FloatUnit + Percent + ";")
-    latencyDistLine = Group(Percent + FloatUnit + ";")
-    latencyDistLines = latencyDistLine * 4
-    countLine = Group(Integer + "requests in" + FloatUnit + "," + FloatUnit + "read;")
-    non2xxLine = Optional(Group("Non-2xx or 3xx responses:" + Integer + ";"))
-    socketErrorLine = Optional(
-        Group(
-            "Socket errors: connect"
-            + Integer
-            + ", read"
-            + Integer
-            + ", write"
-            + Integer
-            + ", timeout"
-            + Integer
-            + ";"
-        )
-    )
-    reqPerSecLine = Group("Requests/sec:" + Floating + ";")
-    transferPerSecLine = Group("Transfer/sec:" + FloatUnit + ";")
+def get_rps_and_latency_parser():
+    count_conn = Group(Integer + "threads and" + Integer + "connections;")
+    lat_stats = Group("Latency" + FloatUnit + FloatUnit + FloatUnit + Percent + ";")
+    rps_stats = Group("Req/Sec" + FloatUnit + FloatUnit + FloatUnit + Percent + ";")
+    lat_dist = Group(Percent + FloatUnit + ";")
+    lat_dists = lat_dist * 4
+    req_count = Group(Integer + "requests in" + FloatUnit + "," + FloatUnit + "read;")
+    non_2xx = Optional(Group("Non-2xx or 3xx responses:" + Integer + ";"))
+    rps_summary = Group("Requests/sec:" + Floating + ";")
+    tps_summary = Group("Transfer/sec:" + FloatUnit + ";")
     rpsParser = (
-        numConnLine
+        count_conn
         + "Thread Stats   Avg      Stdev     Max   +/- Stdev;"
-        + latencyLine
-        + reqSecLine
+        + lat_stats
+        + rps_stats
         + "Latency Distribution;"
-        + latencyDistLines
-        + countLine
-        + non2xxLine
-        + socketErrorLine
-        + reqPerSecLine
-        + transferPerSecLine
+        + lat_dists
+        + req_count
+        + non_2xx
+        + rps_summary
+        + tps_summary
     )
 
     return rpsParser
@@ -111,41 +115,50 @@ def getRpsAndLatencyParser():
 
 @dataclass
 class RpsSummary(object):
-    requestsPerSec: float = 0
-    transferMegaBytesPerSec: int = 0
-    average: float = 0
-    maxRps: float = 0
-    stdev: float = 0
-    stdevRange: float = 0
-    requestCount: int = 0
-    megaBytesRead: float = 0
-    overTimeSeconds: float = 0
-    non2xxFailedCount: int = 0
+    requests_per_sec: float = 0
+    transfer_megabytes_per_sec: int = 0
+    request_count: int = 0
+    megabytes_read: float = 0
+    over_seconds: float = 0
+    non_2xx_count: int = 0
+    thread_rps_mean: float = 0
+    thread_rps_max: float = 0
+    thread_rps_stdev: float = 0
+    thread_rps_stdev_range: float = 0
 
 
 @dataclass
 class LatencySummary(object):
-    avg: float = 0
-    maxLat: float = 0
-    stdev: float = 0
-    stdevRange: float = 0
     lat50: float = 0
     lat75: float = 0
     lat90: float = 0
     lat99: float = 0
+    thread_mean: float = 0
+    thread_max: float = 0
+    thread_stdev: float = 0
+    thread_stdev_range: float = 0
 
 
 @dataclass
 class MemorySummary(object):
-    avg: float = 0
+    mean: float = 0
     median: float = 0
-    maxMem: float = 0
+    max: float = 0
     stdev: float = 0
-    stdevRange: float = 0
+    stdev_range: float = 0
+
+
+@dataclass
+class RawSummary(object):
+    threads: int = 0
+    connections: int = 0
+    rps: RpsSummary = None
+    latency: LatencySummary = None
 
 
 @dataclass
 class FrameworkSummary(object):
+    name: str = ""
     threads: int = 0
     connections: int = 0
     rps: RpsSummary = None
@@ -157,7 +170,7 @@ class FrameworkSummary(object):
 # Prefer milliseconds of seconds (s), milliseconds (ms) and microseconds (us)
 # Prefer megabytes of kilobytes (KB), megabytes (MB), gigabytes (GB)
 # Prefer 0-100 for percent
-def noUnits(nums: List[str]) -> float:
+def no_units(nums: List[str]) -> float:
     if len(nums) == 0:
         raise ValueError("nums must be non-empty list of str")
     if len(nums) > 2:
@@ -189,22 +202,22 @@ def noUnits(nums: List[str]) -> float:
         raise ValueError("Unknown unit: " + unit)
 
 
-def getRpsAndLatency(filename: str):
-    textSections = {}
-    with open(filename, "r") as rpsFile:
+def get_rps_and_latency(filename: str) -> List[RawSummary]:
+    text_sections = {}
+    with open(filename, "r") as rps_file:
         section = 0
-        inHeader = False
-        for line in rpsFile:
+        inheader = False
+        for line in rps_file:
             line = line.strip()
             if line.startswith("----"):
-                if inHeader:
-                    inHeader = False
+                if inheader:
+                    inheader = False
                     continue
-                inHeader = True
+                inheader = True
                 section += 1
-                textSections[section] = ""
+                text_sections[section] = ""
                 continue
-            if inHeader:
+            if inheader:
                 continue
             if line.startswith("unable to connect to"):
                 return None
@@ -212,78 +225,78 @@ def getRpsAndLatency(filename: str):
                 return None
             if line.startswith("Socket errors"):
                 return None
+            if line.endswith("-nan%"):
+                return None
             if (
                 line.startswith("Running")
                 or line.startswith("STARTTIME")
                 or line.startswith("ENDTIME")
             ):
                 continue
-            textSections[section] += " " + line + ";\n"
+            text_sections[section] += " " + line + ";\n"
 
-    rpsParser = getRpsAndLatencyParser()
-    sectionResults = []
-    for index, section in textSections.items():
+    rps_parser = get_rps_and_latency_parser()
+    section_results = []
+    for index, section in text_sections.items():
         try:
-            t = rpsParser.parseString(section)
+            t = rps_parser.parseString(section)
 
             threads, connections = int(t[0][0]), int(t[0][2])
-            latAvg, latStdev, latMax, latStdevRange = [noUnits(e) for e in t[2][1:5]]
-            rpsAvg, rpsStdev, rpsMax, rpsStdevRange = [noUnits(e) for e in t[3][1:5]]
-            lat50, lat75, lat90, lat99 = [noUnits(e[1]) for e in t[5:9]]
-            reqCount, overTime, read = (
+            latavg, latstdev, latmax, latstdevrange = [no_units(e) for e in t[2][1:5]]
+            rpsavg, rpsstdev, rpsmax, rpsstdevrange = [no_units(e) for e in t[3][1:5]]
+            lat50, lat75, lat90, lat99 = [no_units(e[1]) for e in t[5:9]]
+            req_count, over_sec, mb_read = (
                 int(t[9][0]),
-                1e-3 * noUnits(t[9][2]),
-                noUnits(t[9][4]),
+                1e-3 * no_units(t[9][2]),
+                no_units(t[9][4]),
             )
             non2xx = 0
             if t[10][0] == "Non-2xx or 3xx responses:":
                 non2xx = int(t[10][1])
 
-            reqSec, bytesSec = float(t[-2][1]), noUnits(t[-1][1])
+            requests_per_sec, megabytes_per_sec = float(t[-2][1]), no_units(t[-1][1])
 
             rps = RpsSummary(
-                requestsPerSec=reqSec,
-                transferMegaBytesPerSec=bytesSec,
-                average=rpsAvg,
-                maxRps=rpsMax,
-                stdev=rpsStdev,
-                stdevRange=rpsStdevRange,
-                requestCount=reqCount,
-                megaBytesRead=read,
-                overTimeSeconds=overTime,
-                non2xxFailedCount=non2xx,
+                requests_per_sec=requests_per_sec,
+                transfer_megabytes_per_sec=megabytes_per_sec,
+                request_count=req_count,
+                megabytes_read=mb_read,
+                over_seconds=over_sec,
+                non_2xx_count=non2xx,
+                thread_rps_mean=rpsavg,
+                thread_rps_max=rpsmax,
+                thread_rps_stdev=rpsstdev,
+                thread_rps_stdev_range=rpsstdevrange,
             )
             latencies = LatencySummary(
-                avg=latAvg,
-                maxLat=latMax,
-                stdev=latStdev,
-                stdevRange=latStdevRange,
                 lat50=lat50,
                 lat75=lat75,
                 lat90=lat90,
                 lat99=lat99,
+                thread_mean=latavg,
+                thread_max=latmax,
+                thread_stdev=latstdev,
+                thread_stdev_range=latstdevrange,
             )
 
-            results = {}
-            results["threads"] = threads
-            results["connections"] = connections
-            results["rps"] = rps
-            results["latency"] = latencies
-            sectionResults.append(results)
+            summary = RawSummary(
+                threads=threads, connections=connections, rps=rps, latency=latencies
+            )
+            section_results.append(summary)
 
         except ValueError as verr:
             raise ValueError("Problem parsing " + filename) from verr
         except TypeError as terr:
             raise TypeError("Problem parsing " + filename) from terr
         except Exception as err:
+            print(section)
             raise Exception("Problem parsing " + filename) from err
 
-    # TODO: fix after testing, return all but warmup
-    return sectionResults[-1]
+    return section_results[1:]
 
 
 # Pulls stats CSV into a DataFrame
-def getStats(filename: str):
+def get_stats(filename: str):
     # Stats CSV has two headers after 4 information lines
     header1 = ""
     header2 = ""
@@ -304,43 +317,52 @@ def getStats(filename: str):
     return read_csv(filename, skiprows=6, names=names, index_col=[0, 1])
 
 
-def getMemoryUsage(filename: str):
-    stats = getStats(filename)
+def get_memory_usage(filename: str):
+    stats = get_stats(filename)
     memory = stats["memory usage", "used"]
     mean = memory.mean()
     stdev = memory.std()
     return MemorySummary(
-        avg=mean,
+        mean=mean,
         median=memory.median(),
-        maxMem=memory.max(),
+        max=memory.max(),
         stdev=stdev,
-        stdevRange=100
-        * memory[(memory > mean - stdev) & (memory < mean + stdev)].count()
+        stdev_range=100
+        * memory[memory.between(mean - stdev, mean + stdev)].count()
         / memory.count(),
     )
 
 
-def getTestResults(testDic: Dict[str, DataFrame]):
-    for testType, frameworkFrame in testDic.items():
-        print(testType)
-        for index, files in frameworkFrame.iterrows():
+def get_test_results(
+    testdic: Dict[str, DataFrame]
+) -> Dict[str, List[FrameworkSummary]]:
+
+    testresults = {}
+    for testtype, frameworkframe in testdic.items():
+        testresults[testtype] = []
+        print(f"Parsing test type '{testtype}'")
+        for index, files in frameworkframe.iterrows():
             framework, paths = files["Framework"], files["Files"]
-            if not getVerification(paths.verificationPath):
+            if not get_verification(paths.verification):
                 continue
 
-            rpsAndLatency = getRpsAndLatency(paths.rawPath)
-            memory = getMemoryUsage(paths.statsPath)
+            rpslats = get_rps_and_latency(paths.raw)
+            if rpslats is None:
+                continue
 
-            # TODO: remove after testing
-            print(framework)
-            print("   " + str(memory))
-            # TODO memoryUsage = getMemoryUsage(paths.statsPath)
+            rpslat = max(rpslats, key=lambda r: r.rps.requests_per_sec)
+            memory = get_memory_usage(paths.stats)
+            summary = FrameworkSummary(
+                name=framework,
+                threads=rpslat.threads,
+                connections=rpslat.connections,
+                rps=rpslat.rps,
+                latency=rpslat.latency,
+                memory=memory,
+            )
+            testresults[testtype].append(summary)
 
-        # testing...
-        print(testType)
-        break
-
-    return None
+    return testresults
 
 
 if __name__ == "__main__":
