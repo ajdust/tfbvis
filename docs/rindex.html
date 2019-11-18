@@ -1,0 +1,60 @@
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>TechEmpower dstats</title>
+    <script src="https://unpkg.com/@ag-grid-community/all-modules/dist/ag-grid-community.min.js"></script>
+    <script src="util.js"></script>
+    <script src="tfb-lookup.js"></script>
+    <script src="main.js"></script>
+</head>
+
+<body>
+    <style>
+        body {
+            background-color: #ebebeb;
+        }
+
+        .description {
+            width: 800px;
+            margin-left: 20px;
+            margin-top: 20px;
+        }
+
+        .filter {
+            width: 800px;
+            margin-left: 30px;
+        }
+
+        #chart {
+            margin-top: 20px;
+        }
+    </style>
+
+    <div class="content">
+        <div class="description">
+            <h3>TechEmpower Benchmarks dstats</h3>
+            <p>Data from TechEmpower benchmarks continuous benchmarking. Results from the 2019-11-01 run. <a
+                    href="https://www.techempower.com/benchmarks/">See the current benchmark here</a>. TODO: match
+                coloring for framework programming language, bars for
+                RPS, latency, memory, and others, default ordering by RPS, hide majority of columns, add columns for
+                language, possibly others.</p>
+        </div>
+
+        <div class="filter">
+            <label for="testtype">Test</label>
+            <select id="testtype" onchange="window.loadTable()">
+                <option value="plaintext">plaintext</option>
+                <option value="json">json</option>
+                <option value="fortune" selected>fortune</option>
+                <option value="query">query</option>
+                <option value="update">update</option>
+                <option value="db">db</option>
+            </select>
+        </div>
+
+        <div id="myGrid" style="margin-top: 20px; height: 100%; width:100%;" class="ag-theme-balham"></div>
+    </div>
+</body>
+
+</html>

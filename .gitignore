@@ -67,3 +67,4 @@ fabric.properties
 
 tfbenv/
 __pycache__/
+.vscode/
