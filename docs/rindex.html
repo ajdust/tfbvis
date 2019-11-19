@@ -2,7 +2,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>TechEmpower dstats</title>
+    <title>Dstat 0.7.3 TechEmpower Benchmarks</title>
     <script src="https://unpkg.com/@ag-grid-community/all-modules/dist/ag-grid-community.min.js"></script>
     <script src="util.js"></script>
     <script src="tfb-lookup.js"></script>
@@ -15,32 +15,45 @@
             background-color: #ebebeb;
         }
 
-        .description {
+        #description {
             width: 800px;
-            margin-left: 20px;
+            margin-left: 10px;
+            margin-top: 10px;
+        }
+
+        #hidedescription {
+            font-size: 10pt;
+            margin-left: 5px;
+        }
+
+        #myGrid {
             margin-top: 20px;
+            height: 95%;
+            width: 100%
+        }
+
+        .hidden {
+            display: none
         }
 
         .filter {
             width: 800px;
-            margin-left: 30px;
+            margin-left: 10px;
         }
 
         #chart {
-            margin-top: 20px;
+            margin-top: 10px;
         }
     </style>
 
     <div class="content">
-        <div class="description">
-            <h3>TechEmpower Benchmarks dstats</h3>
+        <div id="description" class="hidden">
+            <h3>Dstat 0.7.3 TechEmpower Benchmarks</h3>
             <p>Data from TechEmpower benchmarks continuous benchmarking. Results from the 2019-11-01 run. <a
-                    href="https://www.techempower.com/benchmarks/">See the current benchmark here</a>. TODO: match
-                coloring for framework programming language, bars for
-                RPS, latency, memory, and others, default ordering by RPS, hide majority of columns, add columns for
-                language, possibly others.</p>
+                    href="https://www.techempower.com/benchmarks/">See the current benchmark here</a>. TODO:
+                x match coloring for framework programming language bars for RPS, latency, memory, and others
+            </p>
         </div>
-
         <div class="filter">
             <label for="testtype">Test</label>
             <select id="testtype" onchange="window.loadTable()">
@@ -51,9 +64,12 @@
                 <option value="update">update</option>
                 <option value="db">db</option>
             </select>
+            <a id="hidedescription" onclick="document.getElementById('description').classList.toggle('hidden')">
+                <u>Toggle description</u>
+            </a>
         </div>
 
-        <div id="myGrid" style="margin-top: 20px; height: 100%; width:100%;" class="ag-theme-balham"></div>
+        <div id="myGrid" class="ag-theme-balham"></div>
     </div>
 </body>
 

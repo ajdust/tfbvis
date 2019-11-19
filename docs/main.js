@@ -1,57 +1,57 @@
 var columnDefs = [
     {
         headerName: "Framework", field: "name",
-        sortable: true, filter: true
+        filter: true, pinned: 'left', cellStyle: { textAlign: "left" }
     },
     {
-        headerName: "Threads", field: "threads",
-        sortable: true
+        headerName: "Threads", field: "threads", hide: true
+
     },
     {
-        headerName: "Connections", field: "connections",
-        sortable: true
+        headerName: "Connections", field: "connections", hide: true,
+
     },
     {
         headerName: "RPS", children: [
             {
                 headerName: "Megabytes read", field: "rps.megabytes_read",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true
             },
             {
                 headerName: "Non 2xx count", field: "rps.non_2xx_count",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter'
             },
             {
                 headerName: "Over seconds", field: "rps.over_seconds",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true
             },
             {
                 headerName: "Request count", field: "rps.request_count",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true
             },
             {
-                headerName: "Requests per sec", field: "rps.requests_per_sec",
-                sortable: true, filter: 'agNumberColumnFilter'
+                headerName: "RPS total", field: "rps.requests_per_sec",
+                filter: 'agNumberColumnFilter', sort: 'desc'
             },
             {
-                headerName: "Thread RPS max", field: "rps.thread_rps_max",
-                sortable: true, filter: 'agNumberColumnFilter'
+                headerName: "RPS max per thread", field: "rps.thread_rps_max",
+                filter: 'agNumberColumnFilter', hide: true
             },
             {
-                headerName: "Thread RPS mean", field: "rps.thread_rps_mean",
-                sortable: true, filter: 'agNumberColumnFilter'
+                headerName: "RPS mean per thread", field: "rps.thread_rps_mean",
+                filter: 'agNumberColumnFilter', hide: true
             },
             {
-                headerName: "Thread RPS stdev", field: "rps.thread_rps_stdev",
-                sortable: true, filter: 'agNumberColumnFilter'
+                headerName: "RPS stdev per thread", field: "rps.thread_rps_stdev",
+                filter: 'agNumberColumnFilter'
             },
             {
-                headerName: "Thread RPS stdev range", field: "rps.thread_rps_stdev_range",
-                sortable: true, filter: 'agNumberColumnFilter'
+                headerName: "RPS stdev range per thread", field: "rps.thread_rps_stdev_range",
+                filter: 'agNumberColumnFilter'
             },
             {
                 headerName: "Transfer megabytes per sec", field: "rps.transfer_megabytes_per_sec",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true
             }
         ]
     },
@@ -59,35 +59,35 @@ var columnDefs = [
         headerName: "Latency", children: [
             {
                 headerName: "50%", field: "latency.lat50",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true
             },
             {
                 headerName: "75%", field: "latency.lat75",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true
             },
             {
                 headerName: "90%", field: "latency.lat90",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true
             },
             {
                 headerName: "99%", field: "latency.lat99",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter'
             },
             {
                 headerName: "Max", field: "latency.thread_max",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter'
             },
             {
                 headerName: "Mean", field: "latency.thread_mean",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter'
             },
             {
                 headerName: "Stdev", field: "latency.thread_stdev",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter'
             },
             {
                 headerName: "Stdev range", field: "latency.thread_stdev_range",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter'
             }
         ]
     },
@@ -95,29 +95,52 @@ var columnDefs = [
         headerName: "Memory", children: [
             {
                 headerName: "Max", field: "memory.max",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter'
             },
             {
                 headerName: "Mean", field: "memory.mean",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter'
             },
             {
                 headerName: "Median", field: "memory.median",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter'
             },
             {
                 headerName: "Stdev", field: "memory.stdev",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter'
             },
             {
                 headerName: "Stdev range", field: "memory.stdev_range",
-                sortable: true, filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter'
             }
+        ]
+    },
+    {
+        headerName: "Meta", children: [
+            { headerName: "Language", field: "meta.language", filter: true },
+            { headerName: "Platform", field: "meta.platform", filter: true },
+            { headerName: "Webserver", field: "meta.webserver", filter: true },
+            { headerName: "Classification", field: "meta.classification", filter: true },
+            { headerName: "Database", field: "meta.database", filter: true },
+            { headerName: "Orm", field: "meta.orm", filter: true },
+            { headerName: "Framework", field: "meta.framework", filter: true }
         ]
     }
 ];
 
-var gridOptions = { columnDefs: columnDefs };
+var gridOptions = {
+    defaultColDef: {
+        sortable: true,
+        resizable: true,
+        width: 100,
+        cellStyle: { textAlign: "right" }
+    },
+    columnDefs: columnDefs,
+};
+
+gridOptions.getRowStyle = function (params) {
+    return { "border-bottom": "1px solid " + params.data.meta.color }
+}
 
 function loadTable() {
     var testtype = document.getElementById("testtype").value;
@@ -128,9 +151,30 @@ function loadTable() {
         return;
     }
 
+    // lookup from TechEmpower's tfb-lookup.js
+    function attachMeta(fetchedData) {
+        for (var i = 0; i < fetchedData.length; i++) {
+            var fw = fetchedData[i];
+            fw.meta = {};
+            var meta = window.lookup.tests(fw.name);
+            if (meta) {
+                var attr = meta.attributes;
+                fw.meta.language = attr.language.name;
+                fw.meta.platform = attr.platform.name;
+                fw.meta.webserver = attr.webserver.name;
+                fw.meta.classification = attr.classification.name;
+                fw.meta.database = attr.database.name;
+                fw.meta.orm = attr.orm.name;
+                fw.meta.framework = attr.framework.name;
+                fw.meta.color = attr.language.opaque;
+            }
+        }
+    }
+
     fetch(testtype + ".json")
         .then(response => response.json())
         .then(fetchedData => {
+            attachMeta(fetchedData);
             window[key] = fetchedData;
             loadTable();
         });
