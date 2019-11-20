@@ -44,6 +44,59 @@
         #chart {
             margin-top: 10px;
         }
+
+        .div-outer-div {
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            -webkit-box-align: center;
+            -ms-flex-align: center;
+            align-items: center;
+            height: 100%;
+            width: 100%
+        }
+
+        .small .div-outer-div {
+            padding-bottom: 5px
+        }
+
+        .div-percent-bar-wrapper {
+            position: relative;
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            -webkit-box-flex: 1;
+            -ms-flex: 1 1 auto;
+            flex: 1 1 auto;
+            height: 100%
+        }
+
+        .small .div-percent-bar-wrapper {
+            border-radius: 5px;
+            border: 1px solid #d3d3d3;
+            height: 10px
+        }
+
+        .div-percent-bar {
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            height: 100%
+        }
+
+        .div-percent-value {
+            position: absolute;
+            padding-left: 4px;
+            font-weight: 700;
+            font-size: 13px;
+            left: 5px;
+            top: 0
+        }
+
+        .small .div-percent-value {
+            font-weight: 400;
+            top: 10px
+        }
     </style>
 
     <div class="content">
@@ -56,7 +109,7 @@
         </div>
         <div class="filter">
             <label for="testtype">Test</label>
-            <select id="testtype" onchange="window.loadTable()">
+            <select id="testtype" onchange="TFB_GRID.loadTable()">
                 <option value="plaintext">plaintext</option>
                 <option value="json">json</option>
                 <option value="fortune" selected>fortune</option>
