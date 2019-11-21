@@ -146,11 +146,12 @@ let columnDefs = [
 
 
 let fTwoPoint = d3.format(",.2f");
+let fOnePoint = d3.format(",.1f");
 let fWhole = d3.format(",.0f");
 
 function memoryFormatter(params) {
-    let v = params.value / 1e6;
-    return v < 1 ? fTwoPoint(v) : fWhole(v);
+    let v = params.value / 1e9;
+    return v < 10 ? fTwoPoint(v) : fOnePoint(v);
 }
 
 function rpsFormatter(params) {
