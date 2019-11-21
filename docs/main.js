@@ -1,4 +1,4 @@
-var columnDefs = [
+let columnDefs = [
     {
         headerName: "Framework", field: "name",
         filter: true, pinned: 'left', cellStyle: { textAlign: "left" }
@@ -18,101 +18,116 @@ var columnDefs = [
                 filter: 'agNumberColumnFilter', hide: true
             },
             {
-                headerName: "Non 2xx count", field: "rps.non_2xx_count",
-                filter: 'agNumberColumnFilter'
-            },
-            {
                 headerName: "Over seconds", field: "rps.over_seconds",
                 filter: 'agNumberColumnFilter', hide: true
             },
             {
                 headerName: "Request count", field: "rps.request_count",
-                filter: 'agNumberColumnFilter', hide: true
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: rpsFormatter
             },
             {
                 headerName: "RPS total", field: "rps.requests_per_sec",
-                filter: 'agNumberColumnFilter', sort: 'desc',
-                cellRenderer: 'percentBarCellRenderer', width: 150
+                filter: 'agNumberColumnFilter', sort: 'desc', valueFormatter: rpsFormatter
+            },
+            {
+                headerName: "% max", field: "rps.requests_per_sec",
+                filter: false, sortable: false,
+                cellRenderer: 'percentBarCellRenderer', width: 200
             },
             {
                 headerName: "RPS max per thread", field: "rps.thread_rps_max",
-                filter: 'agNumberColumnFilter', hide: true
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: rpsFormatter
             },
             {
                 headerName: "RPS mean per thread", field: "rps.thread_rps_mean",
-                filter: 'agNumberColumnFilter', hide: true
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: rpsFormatter
             },
             {
                 headerName: "RPS stdev per thread", field: "rps.thread_rps_stdev",
-                filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', valueFormatter: rpsFormatter
             },
             {
                 headerName: "RPS stdev range per thread", field: "rps.thread_rps_stdev_range",
-                filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: percentFormatter
             },
             {
-                headerName: "Transfer megabytes per sec", field: "rps.transfer_megabytes_per_sec",
+                headerName: "Transfer MB per sec", field: "rps.transfer_megabytes_per_sec",
                 filter: 'agNumberColumnFilter', hide: true
-            }
+            },
+            {
+                headerName: "Non 2xx count", field: "rps.non_2xx_count",
+                filter: 'agNumberColumnFilter', valueFormatter: non2xxFormatter,
+                cellStyle: { color: "red" }
+            },
         ]
     },
     {
-        headerName: "Latency", children: [
+        headerName: "Latency (ms)", children: [
             {
                 headerName: "50%", field: "latency.lat50",
-                filter: 'agNumberColumnFilter', hide: true
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: latencyFormatter
             },
             {
                 headerName: "75%", field: "latency.lat75",
-                filter: 'agNumberColumnFilter', hide: true
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: latencyFormatter
             },
             {
                 headerName: "90%", field: "latency.lat90",
-                filter: 'agNumberColumnFilter', hide: true
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: latencyFormatter
             },
             {
                 headerName: "99%", field: "latency.lat99",
-                filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: latencyFormatter
+            },
+            {
+                headerName: "% mean Lat90", field: "latency.lat90",
+                filter: false, sortable: false,
+                cellRenderer: 'percentBarCellRenderer', width: 200
             },
             {
                 headerName: "Max", field: "latency.thread_max",
-                filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: latencyFormatter
             },
             {
                 headerName: "Mean", field: "latency.thread_mean",
-                filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: latencyFormatter
             },
             {
                 headerName: "Stdev", field: "latency.thread_stdev",
-                filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', valueFormatter: latencyFormatter
             },
             {
                 headerName: "Stdev range", field: "latency.thread_stdev_range",
-                filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: percentFormatter
             }
         ]
     },
     {
-        headerName: "Memory", children: [
+        headerName: "Memory (GB)", children: [
             {
                 headerName: "Max", field: "memory.max",
-                filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: memoryFormatter
             },
             {
                 headerName: "Mean", field: "memory.mean",
-                filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', valueFormatter: memoryFormatter
+            },
+            {
+                headerName: "% max mean", field: "memory.mean",
+                filter: false, sortable: false,
+                cellRenderer: 'percentBarCellRenderer', width: 200
             },
             {
                 headerName: "Median", field: "memory.median",
-                filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: memoryFormatter
             },
             {
                 headerName: "Stdev", field: "memory.stdev",
-                filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', valueFormatter: memoryFormatter
             },
             {
                 headerName: "Stdev range", field: "memory.stdev_range",
-                filter: 'agNumberColumnFilter'
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: percentFormatter
             }
         ]
     },
@@ -129,52 +144,87 @@ var columnDefs = [
     }
 ];
 
+
+let fTwoPoint = d3.format(",.2f");
+let fWhole = d3.format(",.0f");
+
+function memoryFormatter(params) {
+    let v = params.value / 1e6;
+    return v < 1 ? fTwoPoint(v) : fWhole(v);
+}
+
+function rpsFormatter(params) {
+    let v = params.value / 1e3;
+    return (v < 1 ? fTwoPoint(v) : fWhole(v)) + "k";
+}
+
+function non2xxFormatter(params) {
+    if (params.value <= 0) return "";
+    let v = params.value / 1e3;
+    return (v < 1 ? fTwoPoint(v) : fWhole(v)) + "k";
+}
+
+function latencyFormatter(params) {
+    return fTwoPoint(params.value);
+}
+
+function percentFormatter(params) {
+    return fWhole(params.value) + "%";
+}
+
 // cell renderer class
 function PercentBarCellRenderer() { }
+{
+    // init method gets the details of the cell to be rendere
+    PercentBarCellRenderer.prototype.init = function (params) {
+        this.eGui = percentCellRenderer(params);
+    };
 
-// init method gets the details of the cell to be rendere
-PercentBarCellRenderer.prototype.init = function (params) {
-    this.eGui = percentCellRenderer(params);
-};
+    PercentBarCellRenderer.prototype.getGui = function () {
+        return this.eGui;
+    };
 
-PercentBarCellRenderer.prototype.getGui = function () {
-    return this.eGui;
-};
+    let percentCellRenderer = function (params) {
+        let value = params.value;
+        var maxThing = 0;
+        if (params.colDef.field.indexOf("rps.") === 0)
+            maxThing = window.TFB_GRID.minMaxes.maxRps;
+        else if (params.colDef.field.indexOf("latency.") === 0)
+            maxThing = window.TFB_GRID.minMaxes.meanLat90;
+        else if (params.colDef.field.indexOf("memory.") === 0)
+            maxThing = window.TFB_GRID.minMaxes.maxMem;
 
-var percentCellRenderer = function (params) {
-    console.log(params);
-    var value = params.value;
-    var percent = 100 * value / window.TFB_GRID.minMaxes.maxRps;
+        let percent = maxThing <= 0 ? 0 : 100 * value / maxThing;
+        let eDivPercentBarWrapper = document.createElement('div');
+        eDivPercentBarWrapper.className = 'div-percent-bar-wrapper';
+        let eDivPercentBar = document.createElement('div');
 
-    var eDivPercentBarWrapper = document.createElement('div');
-    eDivPercentBarWrapper.className = 'div-percent-bar-wrapper';
-    var eDivPercentBar = document.createElement('div');
+        eDivPercentBarWrapper.appendChild(eDivPercentBar);
+        eDivPercentBar.className = "div-percent-bar";
+        eDivPercentBar.style.width = (percent > 100 ? "100" : percent) + "%";
+        eDivPercentBar.style.backgroundColor = percent > 100
+            ? "red" : (params.data.meta.color || "#cccccc");
 
-    eDivPercentBarWrapper.appendChild(eDivPercentBar);
-    eDivPercentBar.className = "div-percent-bar";
-    eDivPercentBar.style.width = percent + "%";
+        // if (percent < 20) {
+        //     eDivPercentBar.style.backgroundColor = "#f55d51";
+        // } else if (percent < 60) {
+        //     eDivPercentBar.style.backgroundColor = "#ffb300";
+        // } else {
+        //     eDivPercentBar.style.backgroundColor = "#82d249";
+        // }
 
-    // eDivPercentBar.style.backgroundColor = data.meta.color || "#cccccc"
+        let eValue = document.createElement("div");
+        eValue.className = "div-percent-value";
+        eValue.innerHTML = fWhole(percent) + "%";
 
-    if (percent < 20) {
-        eDivPercentBar.style.backgroundColor = "#f55d51";
-    } else if (percent < 60) {
-        eDivPercentBar.style.backgroundColor = "#ffb300";
-    } else {
-        eDivPercentBar.style.backgroundColor = "#82d249";
-    }
+        let eOuterDiv = document.createElement("div");
+        eOuterDiv.className = "div-outer-div";
+        eOuterDiv.appendChild(eDivPercentBarWrapper);
+        eOuterDiv.appendChild(eValue);
 
-    var eValue = document.createElement("div");
-    eValue.className = "div-percent-value";
-    eValue.innerHTML = value + " (" + percent + "%)";
-
-    var eOuterDiv = document.createElement("div");
-    eOuterDiv.className = "div-outer-div";
-    eOuterDiv.appendChild(eDivPercentBarWrapper);
-    eOuterDiv.appendChild(eValue);
-
-    return eOuterDiv;
-};
+        return eOuterDiv;
+    };
+}
 
 window.TFB_GRID = {
     gridOptions: {
@@ -188,32 +238,36 @@ window.TFB_GRID = {
         components: {
             'percentBarCellRenderer': PercentBarCellRenderer
         }
-        // getRowStyle: function (params) {
-        //     return { "border-bottom": "1px solid " + params.data.meta.color }
-        // }
     },
 
     loadTable: function () {
-        var testtype = document.getElementById("testtype").value;
-        var key = "data" + testtype;
+        let testtype = document.getElementById("testtype").value;
+        let key = "data" + testtype;
 
-        var cached = TFB_GRID[key];
+        let colChecks = document.querySelectorAll("#columnChecks li input");
+        for (let i = 0; i < colChecks.length; i++) {
+            let colCheck = colChecks[i];
+            let key = colCheck.getAttribute('data-key');
+            if (!key) continue;
+            TFB_GRID.gridOptions.columnApi.setColumnVisible(key, colCheck.checked);
+        }
+
+        let cached = TFB_GRID[key];
         if (cached) {
             TFB_GRID.minMaxes = calculateMinMaxes(cached);
             TFB_GRID.gridOptions.api.setRowData(cached);
-            console.log('refreshhing');
             TFB_GRID.gridOptions.api.refreshCells();
             return;
         }
 
         // lookup from TechEmpower's tfb-lookup.js
         function attachMeta(fetchedData) {
-            for (var i = 0; i < fetchedData.length; i++) {
-                var fw = fetchedData[i];
+            for (let i = 0; i < fetchedData.length; i++) {
+                let fw = fetchedData[i];
                 fw.meta = {};
-                var meta = window.lookup.tests(fw.name);
+                let meta = window.lookup.tests(fw.name);
                 if (meta) {
-                    var attr = meta.attributes;
+                    let attr = meta.attributes;
                     fw.meta.language = attr.language.name;
                     fw.meta.platform = attr.platform.name;
                     fw.meta.webserver = attr.webserver.name;
@@ -227,15 +281,18 @@ window.TFB_GRID = {
         }
 
         function calculateMinMaxes(fetchedData) {
-            var maxRps = 0, minLat90 = Infinity, maxMem = 0;
-            for (var i = 0; i < fetchedData.length; i++) {
-                var fw = fetchedData[i];
+            let maxRps = 0, sumLat90 = 0, countLat90 = 0, maxMem = 0;
+            for (let i = 0; i < fetchedData.length; i++) {
+                let fw = fetchedData[i];
                 if (fw.rps.requests_per_sec > maxRps) maxRps = fw.rps.requests_per_sec;
                 if (fw.memory.max > maxMem) maxMem = fw.memory.max;
-                if (fw.latency.lat90 < minLat90) minLat90 = fw.latency.lat90;
+                if (fw.latency.lat90 > 0) {
+                    countLat90 += 1;
+                    sumLat90 += fw.latency.lat90;
+                }
             }
 
-            return { maxRps: maxRps, minLat90: minLat90, maxMem: maxMem };
+            return { maxRps: maxRps, meanLat90: sumLat90 / countLat90, maxMem: maxMem };
         }
 
         fetch(testtype + ".json")
@@ -250,7 +307,27 @@ window.TFB_GRID = {
 };
 
 document.addEventListener('DOMContentLoaded', function () {
-    var gridDiv = document.querySelector('#myGrid');
+    let gridDiv = document.querySelector('#myGrid');
     new agGrid.Grid(gridDiv, TFB_GRID.gridOptions);
     TFB_GRID.loadTable();
+
+    let checks = document.getElementById("columnChecks");
+    for (let i = 1; i < columnDefs.length; i++) {
+        let columnDef = columnDefs[i];
+        if (columnDef.children) {
+            let e = document.createElement("li");
+            e.innerHTML = columnDef.headerName + ":";
+            checks.appendChild(e);
+            for (let j = 0; j < columnDef.children.length; j++) {
+                let e = document.createElement("li");
+                childColumnDef = columnDef.children[j];
+                e.innerHTML = `<input type="checkbox" data-key="${childColumnDef.field}" onchange="TFB_GRID.loadTable()" ${(childColumnDef.hide ? "" : "checked")}>${childColumnDef.headerName}</input>`;
+                checks.appendChild(e);
+            }
+        } else {
+            let e = document.createElement("li");
+            e.innerHTML = `<input type="checkbox" data-key="${columnDef.field}" onchange="TFB_GRID.loadTable()" ${(columnDef.hide ? "" : "checked")}>${columnDef.headerName}</input>`;
+            checks.appendChild(e);
+        }
+    }
 });

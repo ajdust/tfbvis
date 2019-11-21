@@ -4,6 +4,9 @@
     <meta charset="utf-8" />
     <title>Dstat 0.7.3 TechEmpower Benchmarks</title>
     <script src="https://unpkg.com/@ag-grid-community/all-modules/dist/ag-grid-community.min.js"></script>
+    <script src="https://d3js.org/d3-format.v1.min.js"
+        integrity="sha384-RRyOsNhl1Mma0xshPY6gvU/HTjUPfEVERBIMt6iqh+h0xbtZ5I+WmdPbU5Jnzjpi"
+        crossorigin="anonymous"></script>
     <script src="util.js"></script>
     <script src="tfb-lookup.js"></script>
     <script src="main.js"></script>
@@ -81,7 +84,8 @@
             display: -webkit-box;
             display: -ms-flexbox;
             display: flex;
-            height: 100%
+            height: 100%;
+            margin-left: 30px;
         }
 
         .div-percent-value {
@@ -97,15 +101,32 @@
             font-weight: 400;
             top: 10px
         }
+
+        #columnChecks {
+            margin: 10px;
+            height: 200px;
+        }
+
+        ul {
+            -moz-column-count: 4;
+            -moz-column-gap: 10px;
+            -webkit-column-count: 4;
+            -webkit-column-gap: 10px;
+            column-count: 4;
+            column-gap: 10px;
+            list-style-type: none;
+        }
     </style>
 
     <div class="content">
         <div id="description" class="hidden">
             <h3>Dstat 0.7.3 TechEmpower Benchmarks</h3>
-            <p>Data from TechEmpower benchmarks continuous benchmarking. Results from the 2019-11-01 run. <a
-                    href="https://www.techempower.com/benchmarks/">See the current benchmark here</a>. TODO:
-                x match coloring for framework programming language bars for RPS, latency, memory, and others
+            <p>Data from TechEmpower benchmarks <a href="https://tfb-status.techempower.com/">continuous
+                    benchmarking</a>. Results from the <a
+                    href="https://tfb-status.techempower.com/results/aa3d1cda-5cb6-489f-bd01-1e3718ca4d8e">2019-10-28</a>
+                run. <a href="https://www.techempower.com/benchmarks/">See the current benchmark here</a>.
             </p>
+            <ul id="columnChecks"></ul>
         </div>
         <div class="filter">
             <label for="testtype">Test</label>
