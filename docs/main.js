@@ -12,7 +12,7 @@ let columnDefs = [
 
     },
     {
-        headerName: "RPS", children: [
+        headerName: "RPS (thousands of requests)", children: [
             {
                 headerName: "Megabytes read", field: "rps.megabytes_read",
                 filter: 'agNumberColumnFilter', hide: true
@@ -30,7 +30,7 @@ let columnDefs = [
                 filter: 'agNumberColumnFilter', sort: 'desc', valueFormatter: rpsFormatter
             },
             {
-                headerName: "% max", field: "rps.requests_per_sec",
+                headerName: "% max RPS", field: "rps.requests_per_sec",
                 filter: false, sortable: false,
                 cellRenderer: 'percentBarCellRenderer', width: 200
             },
@@ -44,11 +44,11 @@ let columnDefs = [
             },
             {
                 headerName: "RPS stdev per thread", field: "rps.thread_rps_stdev",
-                filter: 'agNumberColumnFilter', valueFormatter: rpsFormatter
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: rpsFormatter
             },
             {
                 headerName: "RPS stdev range per thread", field: "rps.thread_rps_stdev_range",
-                filter: 'agNumberColumnFilter', hide: true, valueFormatter: percentFormatter
+                filter: 'agNumberColumnFilter', valueFormatter: percentFormatter
             },
             {
                 headerName: "Transfer MB per sec", field: "rps.transfer_megabytes_per_sec",
@@ -94,11 +94,11 @@ let columnDefs = [
             },
             {
                 headerName: "Stdev", field: "latency.thread_stdev",
-                filter: 'agNumberColumnFilter', valueFormatter: latencyFormatter
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: latencyFormatter
             },
             {
                 headerName: "Stdev range", field: "latency.thread_stdev_range",
-                filter: 'agNumberColumnFilter', hide: true, valueFormatter: percentFormatter
+                filter: 'agNumberColumnFilter', valueFormatter: percentFormatter
             }
         ]
     },
@@ -123,11 +123,11 @@ let columnDefs = [
             },
             {
                 headerName: "Stdev", field: "memory.stdev",
-                filter: 'agNumberColumnFilter', valueFormatter: memoryFormatter
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: memoryFormatter
             },
             {
                 headerName: "Stdev range", field: "memory.stdev_range",
-                filter: 'agNumberColumnFilter', hide: true, valueFormatter: percentFormatter
+                filter: 'agNumberColumnFilter', valueFormatter: percentFormatter
             }
         ]
     },
@@ -156,13 +156,13 @@ function memoryFormatter(params) {
 
 function rpsFormatter(params) {
     let v = params.value / 1e3;
-    return (v < 1 ? fTwoPoint(v) : fWhole(v)) + "k";
+    return (v < 10 ? fTwoPoint(v) : fWhole(v));
 }
 
 function non2xxFormatter(params) {
     if (params.value <= 0) return "";
     let v = params.value / 1e3;
-    return (v < 1 ? fTwoPoint(v) : fWhole(v)) + "k";
+    return (v < 10 ? fTwoPoint(v) : fWhole(v));
 }
 
 function latencyFormatter(params) {
@@ -217,6 +217,19 @@ function PercentBarCellRenderer() { }
         let eValue = document.createElement("div");
         eValue.className = "div-percent-value";
         eValue.innerHTML = fWhole(percent) + "%";
+        if (percent > 85) {
+            eValue.style["margin-left"] = "3%";
+            eValue.style.color = "white";
+            eValue.style["text-shadow"] = "black 1px 1px";
+        } else if (percent > 70) {
+            eValue.style["margin-left"] = (percent - 5) + "%";
+        } else if (percent > 10) {
+            eValue.style["margin-left"] = percent + "%";
+        } else if (percent > 5) {
+            eValue.style["margin-left"] = (percent + 2) + "%";
+        } else {
+            eValue.style["margin-left"] = (percent + 4) + "%";
+        }
 
         let eOuterDiv = document.createElement("div");
         eOuterDiv.className = "div-outer-div";
