@@ -48,7 +48,7 @@ let columnDefs = [
             },
             {
                 headerName: "RPS stdev range per thread", field: "rps.thread_rps_stdev_range",
-                filter: 'agNumberColumnFilter', valueFormatter: percentFormatter
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: percentFormatter
             },
             {
                 headerName: "Transfer MB per sec", field: "rps.transfer_megabytes_per_sec",
@@ -80,7 +80,7 @@ let columnDefs = [
                 filter: 'agNumberColumnFilter', hide: true, valueFormatter: latencyFormatter
             },
             {
-                headerName: "% mean Lat90", field: "latency.lat90",
+                headerName: "% mean 90%", field: "latency.lat90",
                 filter: false, sortable: false,
                 cellRenderer: 'percentBarCellRenderer', width: 200
             },
@@ -98,7 +98,7 @@ let columnDefs = [
             },
             {
                 headerName: "Stdev range", field: "latency.thread_stdev_range",
-                filter: 'agNumberColumnFilter', valueFormatter: percentFormatter
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: percentFormatter
             }
         ]
     },
@@ -127,7 +127,36 @@ let columnDefs = [
             },
             {
                 headerName: "Stdev range", field: "memory.stdev_range",
-                filter: 'agNumberColumnFilter', valueFormatter: percentFormatter
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: percentFormatter
+            }
+        ]
+    },
+    {
+        headerName: "CPU (total usage)", children: [
+            {
+                headerName: "Max", field: "cpu.max",
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
+            },
+            {
+                headerName: "Mean", field: "cpu.mean",
+                filter: 'agNumberColumnFilter', valueFormatter: cpuFormatter
+            },
+            {
+                headerName: "% max mean", field: "cpu.mean",
+                filter: false, sortable: false,
+                cellRenderer: 'percentBarCellRenderer', width: 200
+            },
+            {
+                headerName: "Median", field: "cpu.median",
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
+            },
+            {
+                headerName: "Stdev", field: "cpu.stdev",
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
+            },
+            {
+                headerName: "Stdev range", field: "cpu.stdev_range",
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
             }
         ]
     },
@@ -169,6 +198,10 @@ function latencyFormatter(params) {
     return fTwoPoint(params.value);
 }
 
+function cpuFormatter(params) {
+    return fOnePoint(params.value) + "%";
+}
+
 function percentFormatter(params) {
     return fWhole(params.value) + "%";
 }
@@ -194,6 +227,8 @@ function PercentBarCellRenderer() { }
             maxThing = window.TFB_GRID.minMaxes.meanLat90;
         else if (params.colDef.field.indexOf("memory.") === 0)
             maxThing = window.TFB_GRID.minMaxes.maxMem;
+        else if (params.colDef.field.indexOf("cpu.") === 0)
+            maxThing = window.TFB_GRID.minMaxes.maxCpu;
 
         let percent = maxThing <= 0 ? 0 : 100 * value / maxThing;
         let eDivPercentBarWrapper = document.createElement('div');
@@ -295,18 +330,24 @@ window.TFB_GRID = {
         }
 
         function calculateMinMaxes(fetchedData) {
-            let maxRps = 0, sumLat90 = 0, countLat90 = 0, maxMem = 0;
+            let maxRps = 0, sumLat90 = 0, countLat90 = 0, maxMem = 0, maxCpu = 0;
             for (let i = 0; i < fetchedData.length; i++) {
                 let fw = fetchedData[i];
                 if (fw.rps.requests_per_sec > maxRps) maxRps = fw.rps.requests_per_sec;
                 if (fw.memory.max > maxMem) maxMem = fw.memory.max;
+                if (fw.cpu.max > maxCpu) maxCpu = fw.cpu.max;
                 if (fw.latency.lat90 > 0) {
                     countLat90 += 1;
                     sumLat90 += fw.latency.lat90;
                 }
             }
 
-            return { maxRps: maxRps, meanLat90: sumLat90 / countLat90, maxMem: maxMem };
+            return {
+                maxRps: maxRps,
+                meanLat90: sumLat90 / countLat90,
+                maxMem: maxMem,
+                maxCpu: maxCpu
+            };
         }
 
         fetch(testtype + ".json")

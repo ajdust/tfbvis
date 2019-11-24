@@ -1,10 +1,11 @@
-from dataclasses import dataclass, asdict, is_dataclass
-from pandas import DataFrame, read_csv
-from pyparsing import Word, Optional, nums, alphas, Group, Combine
-from typing import Dict, List
-import json
-import numpy as np
 import os
+from dataclasses import asdict, dataclass, is_dataclass
+from typing import Dict, List
+
+import numpy as np
+import simplejson
+from pandas import DataFrame, read_csv
+from pyparsing import Combine, Group, Optional, Word, alphas, nums
 
 Integer = Word(nums)
 Floating = Combine(Word(nums) + Optional(Combine("." + Word(nums))))
@@ -13,11 +14,17 @@ FloatUnit = Group(Floating + Optional(Word(alphas)))
 Percent = Group(Floating + "%")
 
 
-class EnhancedJSONEncoder(json.JSONEncoder):
+class EnhancedJSONEncoder(simplejson.JSONEncoder):
+    """
+    Extended JSON encoder to handle numpy types used in pandas.
+    """
+
     def default(self, o):
         if isinstance(o, np.integer):
             return int(o)
         elif isinstance(o, np.floating):
+            if np.isnan(o) or np.isinf(o):
+                return None
             return float(o)
         elif isinstance(o, np.ndarray):
             return o.tolist()
@@ -27,13 +34,12 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 
 
 def main(args):
-    # TODO: zip file unzipping/caching, zipfile = sys.argv[1]
     test_files = get_test_result_files(args[0])
     test_results = get_test_results(test_files)
     for testtype, results in test_results.items():
         with open(f"docs/{testtype}.json", "w") as f:
             print(f"Writing {testtype}.json")
-            f.write(json.dumps(results, cls=EnhancedJSONEncoder))
+            f.write(simplejson.dumps(results, cls=EnhancedJSONEncoder, ignore_nan=True))
 
 
 @dataclass
@@ -97,7 +103,8 @@ def get_rps_and_latency_parser():
     non_2xx = Optional(Group("Non-2xx or 3xx responses:" + Integer + ";"))
     rps_summary = Group("Requests/sec:" + Floating + ";")
     tps_summary = Group("Transfer/sec:" + FloatUnit + ";")
-    rpsParser = (
+    start_end = Group("STARTTIME" + Integer + ";" + "ENDTIME" + Integer + ";")
+    parser = (
         count_conn
         + "Thread Stats   Avg      Stdev     Max   +/- Stdev;"
         + lat_stats
@@ -108,9 +115,10 @@ def get_rps_and_latency_parser():
         + non_2xx
         + rps_summary
         + tps_summary
+        + start_end
     )
 
-    return rpsParser
+    return parser
 
 
 @dataclass
@@ -149,11 +157,22 @@ class MemorySummary(object):
 
 
 @dataclass
+class CpuSummary(object):
+    mean: float = 0
+    median: float = 0
+    max: float = 0
+    stdev: float = 0
+    stdev_range: float = 0
+
+
+@dataclass
 class RawSummary(object):
     threads: int = 0
     connections: int = 0
     rps: RpsSummary = None
     latency: LatencySummary = None
+    starttime: float = 0
+    endtime: float = 0
 
 
 @dataclass
@@ -164,13 +183,16 @@ class FrameworkSummary(object):
     rps: RpsSummary = None
     latency: LatencySummary = None
     memory: MemorySummary = None
+    cpu: CpuSummary = None
 
 
-# Normalize measurements
-# Prefer milliseconds of seconds (s), milliseconds (ms) and microseconds (us)
-# Prefer megabytes of kilobytes (KB), megabytes (MB), gigabytes (GB)
-# Prefer 0-100 for percent
 def no_units(nums: List[str]) -> float:
+    """
+    Remove unit annotations and convert to one scale.
+    Prefer milliseconds when given seconds (s) or microseconds (us).
+    Prefer megabytes when given kilobytes (KB) or gigabytes (GB).
+    Prefer 0-100 for percent.
+    """
     if len(nums) == 0:
         raise ValueError("nums must be non-empty list of str")
     if len(nums) > 2:
@@ -217,27 +239,23 @@ def get_rps_and_latency(filename: str) -> List[RawSummary]:
                 section += 1
                 text_sections[section] = ""
                 continue
-            if inheader:
+            if inheader or line.startswith("Running"):
                 continue
-            if line.startswith("unable to connect to"):
-                return None
-            if line.startswith("0 requests"):
-                return None
-            if line.startswith("Socket errors"):
-                return None
-            if line.endswith("-nan%"):
-                return None
             if (
-                line.startswith("Running")
-                or line.startswith("STARTTIME")
-                or line.startswith("ENDTIME")
+                line.startswith("unable to connect to")
+                or line.startswith("0 requests")
+                or line.startswith("Socket errors")
+                or line.endswith("nan%")
             ):
-                continue
+                return None
             text_sections[section] += " " + line + ";\n"
 
     rps_parser = get_rps_and_latency_parser()
     section_results = []
     for index, section in text_sections.items():
+        # Warmup and primer don't have start/end time, so filter them out
+        if "STARTTIME" not in section:
+            continue
         try:
             t = rps_parser.parseString(section)
 
@@ -254,7 +272,8 @@ def get_rps_and_latency(filename: str) -> List[RawSummary]:
             if t[10][0] == "Non-2xx or 3xx responses:":
                 non2xx = int(t[10][1])
 
-            requests_per_sec, megabytes_per_sec = float(t[-2][1]), no_units(t[-1][1])
+            requests_per_sec, megabytes_per_sec = float(t[-3][1]), no_units(t[-2][1])
+            starttime, endtime = float(t[-1][1]), float(t[-1][4])
 
             rps = RpsSummary(
                 requests_per_sec=requests_per_sec,
@@ -280,7 +299,12 @@ def get_rps_and_latency(filename: str) -> List[RawSummary]:
             )
 
             summary = RawSummary(
-                threads=threads, connections=connections, rps=rps, latency=latencies
+                threads=threads,
+                connections=connections,
+                rps=rps,
+                latency=latencies,
+                starttime=starttime,
+                endtime=endtime,
             )
             section_results.append(summary)
 
@@ -292,12 +316,15 @@ def get_rps_and_latency(filename: str) -> List[RawSummary]:
             print(section)
             raise Exception("Problem parsing " + filename) from err
 
-    return section_results[1:]
+    return section_results
 
 
-# Pulls stats CSV into a DataFrame
 def get_stats(filename: str):
-    # Stats CSV has two headers after 4 information lines
+    """
+    Pulls stats CSV into a DataFrame.
+    """
+    # Stats CSV has two headers after 4 information lines. Skip the four lines
+    # and parse the headers manually to use the double-key in our DataFrame.
     header1 = ""
     header2 = ""
     with open(filename, "r") as csv:
@@ -314,11 +341,11 @@ def get_stats(filename: str):
         else:
             names.append((lasth1, h2))
 
-    return read_csv(filename, skiprows=6, names=names, index_col=[0, 1])
+    names[0] = "epoch"
+    return read_csv(filename, skiprows=6, names=names, index_col=[0])
 
 
-def get_memory_usage(filename: str):
-    stats = get_stats(filename)
+def get_memory_usage(stats: DataFrame):
     memory = stats["memory usage", "used"]
     mean = memory.mean()
     stdev = memory.std()
@@ -330,6 +357,21 @@ def get_memory_usage(filename: str):
         stdev_range=100
         * memory[memory.between(mean - stdev, mean + stdev)].count()
         / memory.count(),
+    )
+
+
+def get_cpu_usage(stats: DataFrame):
+    cpu = stats["total cpu usage", "usr"]
+    mean = cpu.mean()
+    stdev = cpu.std()
+    return CpuSummary(
+        mean=mean,
+        median=cpu.median(),
+        max=cpu.max(),
+        stdev=stdev,
+        stdev_range=100
+        * cpu[cpu.between(mean - stdev, mean + stdev)].count()
+        / cpu.count(),
     )
 
 
@@ -350,8 +392,16 @@ def get_test_results(
             if rpslats is None:
                 continue
 
+            # Get the best RPS result
             rpslat = max(rpslats, key=lambda r: r.rps.requests_per_sec)
-            memory = get_memory_usage(paths.stats)
+
+            # Get a DataFrame of the Dstat CSV
+            # Using only data from the fastest 15 second measurement
+            # Add one second to starttime to allow framework to ramp up cpu/memory
+            start, end = rpslat.starttime + 1, rpslat.endtime
+            statframe = get_stats(paths.stats).loc[start:end]
+            memory = get_memory_usage(statframe)
+            cpu = get_cpu_usage(statframe)
             summary = FrameworkSummary(
                 name=framework,
                 threads=rpslat.threads,
@@ -359,6 +409,7 @@ def get_test_results(
                 rps=rpslat.rps,
                 latency=rpslat.latency,
                 memory=memory,
+                cpu=cpu,
             )
             testresults[testtype].append(summary)
 
@@ -366,12 +417,4 @@ def get_test_results(
 
 
 if __name__ == "__main__":
-    # if len(sys.argv) != 2:
-    #     raise IndexError(
-    #         "You must pass in the path of the ZIP file or directory containing \
-    #         the Techempower Framework Benchmark results"
-    #     )
-    # resultsDir = sys.argv[1]
-
-    # TODO: remove after testing
     main(["/home/aaron/downloads/results/20191028112203/"])
