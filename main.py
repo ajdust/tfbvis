@@ -1,12 +1,18 @@
 import os
+import re
+import sys
 from dataclasses import asdict, dataclass, is_dataclass
 from typing import Dict, List
+from urllib.parse import urlparse
+from urllib.request import urlopen
+from zipfile import ZipFile
 
 import numpy as np
 import simplejson
 from pandas import DataFrame, read_csv
 from pyparsing import Combine, Group, Optional, Word, alphas, nums
 
+GuidPattern = "[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}"  # noqa: W605, E501
 Integer = Word(nums)
 Floating = Combine(Word(nums) + Optional(Combine("." + Word(nums))))
 # FloatUnit: 12.34ms, 12.34k, or just 12.34
@@ -33,13 +39,34 @@ class EnhancedJSONEncoder(simplejson.JSONEncoder):
         return super().default(o)
 
 
-def main(args):
-    test_files = get_test_result_files(args[0])
-    test_results = get_test_results(test_files)
-    for testtype, results in test_results.items():
-        with open(f"docs/{testtype}.json", "w") as f:
-            print(f"Writing {testtype}.json")
-            f.write(simplejson.dumps(results, cls=EnhancedJSONEncoder, ignore_nan=True))
+def start(args):
+    for arg in args:
+        entry, name = arg
+        test_files = get_test_result_files(entry.path)
+        test_results = get_test_results(test_files)
+        for testtype, results in test_results.items():
+            results_dir = f"docs/{name}"
+            if not os.path.exists(results_dir):
+                os.makedirs(results_dir)
+            with open(f"{results_dir}/{testtype}.json", "w") as f:
+                print(f"Writing {results_dir}/{testtype}.json")
+                f.write(
+                    simplejson.dumps(results, cls=EnhancedJSONEncoder, ignore_nan=True)
+                )
+
+        record = "docs/result_directories.json"
+        if not os.path.isfile(record):
+            with open(record, "w") as f:
+                f.write("[]")
+
+        with open(record, "r+") as f:
+            content = f.read()
+            paths = simplejson.loads(content)
+            paths.append(name)
+            new_paths = simplejson.dumps(list(set(paths)))
+            f.seek(0)
+            f.write(new_paths)
+            f.truncate()
 
 
 @dataclass
@@ -389,7 +416,7 @@ def get_test_results(
                 continue
 
             rpslats = get_rps_and_latency(paths.raw)
-            if rpslats is None:
+            if rpslats is None or len(rpslats) == 0:
                 continue
 
             # Get the best RPS result
@@ -416,5 +443,110 @@ def get_test_results(
     return testresults
 
 
+def download_results(url):
+    """
+    Download the results zip from the web, e.g. from
+    https://tfb-status.techempower.com/results/5bc93dbb-7aa6-49a1-ab39-a2d36106beb9,
+    if it is not found already in 'cache/'.
+    """
+
+    content = urlopen(url).read().decode("utf-8")
+    if "<body>" not in content:
+        raise ValueError(f"Could not find '<body>' at '{url}'")
+
+    # basic meta data from HTML for download path {environment}_{date}_{runid}
+    body = content[content.index("<body>") :]  # noqa: E203
+    f100 = body[:100]
+
+    environment = "UnknownEnvironment"
+    if "Azure" in f100:
+        environment = "Azure"
+    elif "Citrine" in f100:
+        environment = "Citrine"
+
+    runid = "UnknownRunId"
+    match = re.search(GuidPattern, f100)
+    if match:
+        runid = match.group(0)
+
+    started_date = "UnknownStartedDate"
+    match = re.search("started [0-9]{4}-[0-9]{2}-[0-9]{2}", body)
+    if match:
+        started_date = match.group(0).replace(" ", "")
+
+    # do a hacky search for results.zip download URL
+    sentinal = ">results.zip</a>"
+    if sentinal not in content:
+        raise ValueError(f"Could not find '{sentinal}' at '{url}'")
+
+    rzip_at = body.index(sentinal)
+    back = 4
+    match = re.search('href="(.*)"', body[(rzip_at - back) : rzip_at])  # noqa: E203
+    while back < rzip_at and not match:
+        match = re.search('href="(.*)"', body[(rzip_at - back) : rzip_at])  # noqa: E203
+        back += 1
+
+    relative_path = match.group(1)
+    uparse = urlparse(url)
+    download_url = f"{uparse.scheme}://{uparse.netloc}/{relative_path}"
+
+    name = f"{environment}_{started_date}_{runid}"
+    results_dir = os.path.join("cache", name)
+    if os.path.isdir(results_dir):
+        print(f"Found existing downloaded results in {results_dir}")
+        return (results_dir, name)
+
+    results_zip = results_dir + ".zip"
+    print(f"Downloading {download_url} to {results_zip}")
+    download_zip = urlopen(download_url).read()
+    with open(results_zip, "wb") as rz:
+        rz.write(download_zip)
+
+    # we have the zip, create the directory and expand data into it
+    if not os.path.isdir("cache"):
+        os.makedirs("cache")
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
+
+    with ZipFile(results_zip, "r") as rz:
+        rz.extractall(results_dir)
+
+    return (results_dir, name)
+
+
+def main(args):
+    if len(args) != 1 and len(args) != 2:
+        print(
+            "Requried arguments: either one URL to the status page of a result, or "
+            + " an existing directory path followed by a name of your choice for the"
+            + " result directory"
+        )
+        return
+
+    # check if we have a URL
+    as_url = urlparse(args[0])
+    if as_url.scheme == "https" and len(as_url.netloc.split(".")) > 1:
+        print(f"Getting result summary at {args[0]}")
+        path, name = download_results(args[0])
+    else:
+        path, name = args[0], args[1]
+
+    if not os.path.isdir(path):
+        print(f"'{path}' is not a directory")
+        return
+
+    # use the results subdirectory if given unzipped path
+    as_unzipped_azure = os.path.join(
+        path, "mnt", "tfb", "FrameworkBenchmarks", "results"
+    )
+    as_unzipped_citrine = os.path.join(path, "results")
+    if os.path.isdir(as_unzipped_azure):
+        path = as_unzipped_azure
+    elif os.path.isdir(as_unzipped_citrine):
+        path = as_unzipped_citrine
+
+    start([(d, name) for d in os.scandir(path) if d.is_dir()])
+
+
 if __name__ == "__main__":
-    main(["/home/aaron/downloads/results/20191028112203/"])
+    main(sys.argv[1:])
