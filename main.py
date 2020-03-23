@@ -382,10 +382,11 @@ def get_memory_usage(stats: DataFrame):
     memory = stats["memory usage", "used"]
     mean = memory.mean()
     stdev = memory.std()
+    # memory usage is in bytes in the data, convert to MB after calculation by dividing
     return MemorySummary(
-        mean=mean,
-        median=memory.median(),
-        max=memory.max(),
+        mean=mean / 1e6,
+        median=memory.median() / 1e6,
+        max=memory.max() / 1e6,
         stdev=stdev,
         stdev_range=100
         * memory[memory.between(mean - stdev, mean + stdev)].count()

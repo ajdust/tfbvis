@@ -27,7 +27,8 @@ let columnDefs = [
             },
             {
                 headerName: "RPS total", field: "rps.requests_per_sec",
-                filter: 'agNumberColumnFilter', sort: 'desc', valueFormatter: rpsFormatter
+                filter: 'agNumberColumnFilter', sort: 'desc', valueFormatter: rpsFormatter,
+                filterParams: { resetButton: true }
             },
             {
                 headerName: "% max RPS", field: "rps.requests_per_sec",
@@ -103,7 +104,7 @@ let columnDefs = [
         ]
     },
     {
-        headerName: "Memory (GB)", children: [
+        headerName: "Memory (MB)", children: [
             {
                 headerName: "Max", field: "memory.max",
                 filter: 'agNumberColumnFilter', hide: true, valueFormatter: memoryFormatter
@@ -179,8 +180,8 @@ let fOnePoint = d3.format(",.1f");
 let fWhole = d3.format(",.0f");
 
 function memoryFormatter(params) {
-    let v = params.value / 1e9;
-    return v < 10 ? fTwoPoint(v) : fOnePoint(v);
+    let v = params.value;
+    return fWhole(v);
 }
 
 function rpsFormatter(params) {
