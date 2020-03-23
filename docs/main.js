@@ -1,7 +1,8 @@
 let columnDefs = [
     {
         headerName: "Framework", field: "name",
-        filter: true, pinned: 'left', cellStyle: { textAlign: "left" }
+        filter: true, pinned: 'left', cellStyle: { textAlign: "left" },
+        tooltip: params => params.data.meta.display_name
     },
     {
         headerName: "Threads", field: "threads", hide: true
@@ -169,7 +170,8 @@ let columnDefs = [
             { headerName: "Classification", field: "meta.classification", filter: true },
             { headerName: "Database", field: "meta.database", filter: true },
             { headerName: "Orm", field: "meta.orm", filter: true },
-            { headerName: "Framework", field: "meta.framework", filter: true }
+            { headerName: "Framework", field: "meta.framework", filter: true },
+            { headerName: "Display Name", field: "meta.display_name", filter: true, hide: true }
         ]
     }
 ];
@@ -300,7 +302,7 @@ window.TFB_GRID = {
         TFB_GRID.loadTable();
     },
 
-    loadTable: function () {
+    loadTable: async function () {
         let testtype = document.getElementById("testtype").value;
         let testrun = document.getElementById("testrun").value;
         let key = `data_${testrun}_${testtype}`;
@@ -322,21 +324,28 @@ window.TFB_GRID = {
         }
 
         // lookup from TechEmpower's tfb-lookup.js
-        function attachMeta(fetchedData) {
+        async function attachMeta(fetchedData) {
+            let response = await fetch(`${testrun}/test_metadata.json`);
+            let metadatas = await response.json();
+            let metamap = {};
+            for (let metadata of metadatas) {
+                metamap[metadata.name] = metadata;
+            }
+
             for (let i = 0; i < fetchedData.length; i++) {
                 let fw = fetchedData[i];
                 fw.meta = {};
-                let meta = window.lookup.tests(fw.name);
+                let meta = metamap[fw.name];
                 if (meta) {
-                    let attr = meta.attributes;
-                    fw.meta.language = attr.language.name;
-                    fw.meta.platform = attr.platform.name;
-                    fw.meta.webserver = attr.webserver.name;
-                    fw.meta.classification = attr.classification.name;
-                    fw.meta.database = attr.database.name;
-                    fw.meta.orm = attr.orm.name;
-                    fw.meta.framework = attr.framework.name;
-                    fw.meta.color = attr.language.opaque;
+                    fw.meta.language = meta.language;
+                    fw.meta.platform = meta.platform;
+                    fw.meta.webserver = meta.webserver;
+                    fw.meta.classification = meta.classification;
+                    fw.meta.database = meta.database;
+                    fw.meta.orm = meta.orm;
+                    fw.meta.framework = meta.framework;
+                    fw.meta.display_name = meta.display_name;
+                    fw.meta.color = getLanguageColor(meta.language);
                 }
             }
         }
@@ -362,20 +371,31 @@ window.TFB_GRID = {
             };
         }
 
-        fetch(`${testrun}/${testtype}.json`)
-            .then(response => response.json())
-            .then(fetchedData => {
-                attachMeta(fetchedData);
-                TFB_GRID[key] = fetchedData;
-                TFB_GRID.minMaxes = calculateMinMaxes(fetchedData);
-                TFB_GRID.loadTable();
-            });
+        let response = await fetch(`${testrun}/${testtype}.json`);
+        let fetchedData = await response.json();
+        await attachMeta(fetchedData);
+        TFB_GRID[key] = fetchedData;
+        TFB_GRID.minMaxes = calculateMinMaxes(fetchedData);
+        TFB_GRID.loadTable();
     }
 };
 
-document.addEventListener('DOMContentLoaded', function () {
-    let gridDiv = document.querySelector('#myGrid');
+async function setLanguageColors() {
+    let response = await fetch("language_colors.json");
+    let colors = await response.json();
+
+    window.LANGUAGE_COLORS = {};
+    for (let [language, color] of Object.entries(colors)) {
+        LANGUAGE_COLORS[language.toLowerCase()] = color;
+    }
+
+    window.getLanguageColor = lang => window.LANGUAGE_COLORS[lang.toLowerCase()];
+}
+
+document.addEventListener("DOMContentLoaded", async function () {
+    let gridDiv = document.querySelector("#myGrid");
     new agGrid.Grid(gridDiv, TFB_GRID.gridOptions);
+    await setLanguageColors();
     TFB_GRID.changeRun();
 
     let checks = document.getElementById("columnChecks");
