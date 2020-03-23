@@ -289,9 +289,20 @@ window.TFB_GRID = {
         }
     },
 
+    changeRun: function () {
+        let el = document.getElementById("testrunLink");
+        let testrun = document.getElementById("testrun").value;
+        let [environment, date, runid] = testrun.split('_');
+        date = date.replace('started', '');
+        let url = `https://tfb-status.techempower.com/results/${runid}`;
+        el.innerHTML = `Showing <a href="${url}">data from the ${environment} run on ${date}.</a>`;
+        TFB_GRID.loadTable();
+    },
+
     loadTable: function () {
         let testtype = document.getElementById("testtype").value;
-        let key = "data" + testtype;
+        let testrun = document.getElementById("testrun").value;
+        let key = `data_${testrun}_${testtype}`;
 
         let colChecks = document.querySelectorAll("#columnChecks li input");
         for (let i = 0; i < colChecks.length; i++) {
@@ -350,7 +361,7 @@ window.TFB_GRID = {
             };
         }
 
-        fetch(testtype + ".json")
+        fetch(`${testrun}/${testtype}.json`)
             .then(response => response.json())
             .then(fetchedData => {
                 attachMeta(fetchedData);
@@ -364,7 +375,7 @@ window.TFB_GRID = {
 document.addEventListener('DOMContentLoaded', function () {
     let gridDiv = document.querySelector('#myGrid');
     new agGrid.Grid(gridDiv, TFB_GRID.gridOptions);
-    TFB_GRID.loadTable();
+    TFB_GRID.changeRun();
 
     let checks = document.getElementById("columnChecks");
     for (let i = 1; i < columnDefs.length; i++) {

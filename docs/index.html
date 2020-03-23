@@ -42,6 +42,10 @@
             margin-left: 10px;
         }
 
+        .filter select {
+            margin-right: 10px;
+        }
+
         #chart {
             margin-top: 10px;
         }
@@ -118,15 +122,21 @@
     <div class="content">
         <div id="description" class="hidden">
             <h3>Dstat 0.7.3 TechEmpower Benchmarks</h3>
-            <p>Data from TechEmpower benchmarks <a href="https://tfb-status.techempower.com/">continuous
-                    benchmarking</a>. Results from the <a
-                    href="https://tfb-status.techempower.com/results/aa3d1cda-5cb6-489f-bd01-1e3718ca4d8e">2019-10-28</a>
-                run. <a href="https://www.techempower.com/benchmarks/">See the current benchmark here</a>.
+            <p>Data from TechEmpower benchmarks
+                <a href="https://tfb-status.techempower.com/">continuous benchmarking</a>.
+                <a href="https://www.techempower.com/benchmarks/">See the current benchmark here</a>.
             </p>
+            <p id="testrunLink"></p>
             <ul id="columnChecks"></ul>
         </div>
         <div class="filter">
-            <label for="testtype">Test</label>
+            <label for="testrun">Run:</label>
+            <select id="testrun" onchange="TFB_GRID.changeRun()">
+                <option value="Citrine_started2020-03-16_71407829-eaa7-4b5d-a6a2-54b8ba3b2d3f">Citrine 2020-3-16
+                </option>
+                <option value="Azure_started2020-03-17_5bc93dbb-7aa6-49a1-ab39-a2d36106beb9">Azure 2020-3-17</option>
+            </select>
+            <label for="testtype">Test:</label>
             <select id="testtype" onchange="TFB_GRID.loadTable()">
                 <option value="plaintext">plaintext</option>
                 <option value="json">json</option>
