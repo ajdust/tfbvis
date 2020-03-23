@@ -233,6 +233,8 @@ def no_units(nums: List[str]) -> float:
         return num
     elif unit == "k":
         return num * 1e3
+    elif unit == "M":
+        return num * 1e6
     elif unit == "GB":
         return num * 1e3
     elif unit == "MB":
@@ -256,9 +258,11 @@ def get_rps_and_latency(filename: str) -> List[RawSummary]:
     with open(filename, "r") as rps_file:
         section = 0
         inheader = False
+        inerror = False  # throw out individual tests that have any socket errors
         for line in rps_file:
             line = line.strip()
             if line.startswith("----"):
+                inerror = False
                 if inheader:
                     inheader = False
                     continue
@@ -266,12 +270,14 @@ def get_rps_and_latency(filename: str) -> List[RawSummary]:
                 section += 1
                 text_sections[section] = ""
                 continue
-            if inheader or line.startswith("Running"):
+            if inheader or inerror or line.startswith("Running"):
+                continue
+            if line.startswith("Socket errors"):
+                inerror = True
                 continue
             if (
                 line.startswith("unable to connect to")
                 or line.startswith("0 requests")
-                or line.startswith("Socket errors")
                 or line.endswith("nan%")
             ):
                 return None
