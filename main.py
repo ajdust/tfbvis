@@ -42,12 +42,17 @@ class EnhancedJSONEncoder(simplejson.JSONEncoder):
 def start(args):
     for arg in args:
         entry, name = arg
+        results_dir = f"docs/{name}"
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir)
+
+        with open(f"{results_dir}/test_metadata.json", "w") as f:
+            with open(os.path.join(entry.path, "test_metadata.json"), "r") as mf:
+                f.write(mf.read())
+
         test_files = get_test_result_files(entry.path)
         test_results = get_test_results(test_files)
         for testtype, results in test_results.items():
-            results_dir = f"docs/{name}"
-            if not os.path.exists(results_dir):
-                os.makedirs(results_dir)
             with open(f"{results_dir}/{testtype}.json", "w") as f:
                 print(f"Writing {results_dir}/{testtype}.json")
                 f.write(
