@@ -192,7 +192,14 @@ let columnDefs = [
             },
             {
                 headerName: "Platform", field: "meta.platform", filter: true,
-                filterParams: regFilterParams
+                filterParams: regFilterParams,
+                cellRenderer: params => {
+                    if (params.value.toLowerCase() == "none")
+                        return params.value;
+                    const query = new URLSearchParams({ q: `${params.value} stars:>10` });
+                    const github = `https://github.com/search?${query}`;
+                    return `<a href="${github}">${params.value}</a>`;
+                }
             },
             {
                 headerName: "Webserver", field: "meta.webserver", filter: true,
@@ -212,7 +219,17 @@ let columnDefs = [
             },
             {
                 headerName: "Framework", field: "meta.framework", filter: true,
-                filterParams: regFilterParams
+                filterParams: regFilterParams,
+                cellRenderer: params => {
+                    if (params.value.toLowerCase() == "none")
+                        return params.value;
+                    const query = new URLSearchParams({
+                        q: `${params.value} language:${params.data.meta.language} stars:>10`,
+                        s: "stars"
+                    });
+                    const github = `https://github.com/search?${query}`;
+                    return `<a href="${github}">${params.value}</a>`;
+                }
             },
             {
                 headerName: "Display Name", field: "meta.display_name", filter: true, hide: true,
