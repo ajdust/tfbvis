@@ -636,22 +636,27 @@ def download_results(url):
     return (results_dir, name)
 
 
-def main(args):
-    if len(args) != 1 and len(args) != 2:
-        print(
-            "Requried arguments: either one URL to the status page of a result, or "
-            + " an existing directory path followed by a name of your choice for the"
-            + " result directory"
-        )
-        return
+def print_help():
+    print(
+        "Required arguments: "
+        + "\n- URL to the status page of a run at https://tfb-status.techempower.com/"
+        + "\n- Existing directory path followed by a name of your choice for results"
+    )
 
-    # check if we have a URL
-    as_url = urlparse(args[0])
-    if as_url.scheme == "https" and len(as_url.netloc.split(".")) > 1:
-        print(f"Getting result summary at {args[0]}")
-        path, name = download_results(args[0])
-    else:
+
+def main(args):
+    if len(args) == 1:
+        # check if we have a URL
+        as_url = urlparse(args[0])
+        if as_url.scheme == "https" and len(as_url.netloc.split(".")) > 1:
+            print(f"Getting result summary at {args[0]}")
+            path, name = download_results(args[0])
+        else:
+            print_help()
+    elif len(args) == 2:
         path, name = args[0], args[1]
+    else:
+        print_help()
 
     if not os.path.isdir(path):
         print(f"'{path}' is not a directory")
