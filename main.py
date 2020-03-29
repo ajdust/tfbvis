@@ -126,24 +126,90 @@ def get_verification(filename: str):
 
 
 def get_rps_and_latency_parser():
-    count_conn = Group(Integer + "threads and" + Integer + "connections;")
-    lat_stats = Group("Latency" + FloatUnit + FloatUnit + FloatUnit + Percent + ";")
-    rps_stats = Group("Req/Sec" + FloatUnit + FloatUnit + FloatUnit + Percent + ";")
-    lat_dist = Group(Percent + FloatUnit + ";")
-    lat_dists = lat_dist * 4
-    req_count = Group(Integer + "requests in" + FloatUnit + "," + FloatUnit + "read;")
-    non_2xx = Optional(Group("Non-2xx or 3xx responses:" + Integer + ";"))
-    rps_summary = Group("Requests/sec:" + Floating + ";")
-    tps_summary = Group("Transfer/sec:" + FloatUnit + ";")
-    start_end = Group("STARTTIME" + Integer + ";" + "ENDTIME" + Integer + ";")
+    count_conn = Group(
+        Integer.setResultsName("ThreadCount")
+        + "threads and"
+        + Integer.setResultsName("ConnectionCount")
+        + "connections;"
+    ).setResultsName("TestCounts")
+    lat_stats = Group(
+        "Latency"
+        + FloatUnit.setResultsName("Avg")
+        + FloatUnit.setResultsName("Stdev")
+        + FloatUnit.setResultsName("Max")
+        + Percent.setResultsName("StdevRange")
+        + ";"
+    ).setResultsName("LatencySummary")
+    rps_stats = Group(
+        "Req/Sec"
+        + FloatUnit.setResultsName("Avg")
+        + FloatUnit.setResultsName("Stdev")
+        + FloatUnit.setResultsName("Max")
+        + Percent.setResultsName("StdevRange")
+        + ";"
+    ).setResultsName("ReqSecSummary")
+    lat_dist_50 = Group("50%" + FloatUnit.setResultsName("Time") + ";").setResultsName(
+        "Latency50"
+    )
+    lat_dist_75 = Group("75%" + FloatUnit.setResultsName("Time") + ";").setResultsName(
+        "Latency75"
+    )
+    lat_dist_90 = Group("90%" + FloatUnit.setResultsName("Time") + ";").setResultsName(
+        "Latency90"
+    )
+    lat_dist_99 = Group("99%" + FloatUnit.setResultsName("Time") + ";").setResultsName(
+        "Latency99"
+    )
+    req_count = Group(
+        Integer.setResultsName("RequestCount")
+        + "requests in"
+        + FloatUnit.setResultsName("OverSeconds")
+        + ","
+        + FloatUnit.setResultsName("BytesRead")
+        + "read;"
+    ).setResultsName("OverTime")
+    non_2xx = Optional(
+        Group("Non-2xx or 3xx responses:" + Integer.setResultsName("Non2xxCount") + ";")
+    ).setResultsName("Non2xx")
+    socket_errors = Optional(
+        Group(
+            "Socket errors: connect"
+            + Integer.setResultsName("ConnectCount")
+            + ", read"
+            + Integer.setResultsName("ReadCount")
+            + ", write"
+            + Integer.setResultsName("WriteCount")
+            + ", timeout"
+            + Integer.setResultsName("TimeoutCount")
+            + ";"
+        )
+    ).setResultsName("SocketErrors")
+    rps_summary = Group(
+        "Requests/sec:" + Floating.setResultsName("RequestsPerSec") + ";"
+    ).setResultsName("ReqSecLine")
+    tps_summary = Group(
+        "Transfer/sec:" + FloatUnit.setResultsName("BytesReadPerSec") + ";"
+    ).setResultsName("BytesReadLine")
+    start_end = Group(
+        "STARTTIME"
+        + Integer.setResultsName("StartTime")
+        + ";"
+        + "ENDTIME"
+        + Integer.setResultsName("EndTime")
+        + ";"
+    ).setResultsName("StartEndTime")
     parser = (
         count_conn
         + "Thread Stats   Avg      Stdev     Max   +/- Stdev;"
         + lat_stats
         + rps_stats
         + "Latency Distribution;"
-        + lat_dists
+        + lat_dist_50
+        + lat_dist_75
+        + lat_dist_90
+        + lat_dist_99
         + req_count
+        + socket_errors
         + non_2xx
         + rps_summary
         + tps_summary
@@ -160,11 +226,12 @@ class RpsSummary(object):
     request_count: int = 0
     megabytes_read: float = 0
     over_seconds: float = 0
-    non_2xx_count: int = 0
+    non_2xx_percent: float = 0
     thread_rps_mean: float = 0
     thread_rps_max: float = 0
     thread_rps_stdev: float = 0
     thread_rps_stdev_range: float = 0
+    socket_error_count: int = 0
 
 
 @dataclass
@@ -260,32 +327,48 @@ def no_units(nums: List[str]) -> float:
 
 def get_rps_and_latency(filename: str) -> List[RawSummary]:
     text_sections = {}
+
+    # preprocess the raw.txt here into sections
     with open(filename, "r") as rps_file:
         section = 0
-        inheader = False
-        inerror = False  # throw out individual tests that have any socket errors
+        in_header = False
+        # the Multiple Query test only uses the 'Query: 20 for query' test
+        in_multiple_query_test = False
+        in_multiple_query_20_test = False
+
         for line in rps_file:
             line = line.strip()
             if line.startswith("----"):
-                inerror = False
-                if inheader:
-                    inheader = False
+                if in_header:
+                    in_header = False
                     continue
-                inheader = True
+                in_header = True
                 section += 1
                 text_sections[section] = ""
                 continue
-            if inheader or inerror or line.startswith("Running"):
+
+            # Ignore all query tests except the last 20-query one
+            if line.startswith("Running Primer query"):
+                in_multiple_query_test = True
+                in_multiple_query_20_test = False
+            if in_multiple_query_test:
+                if line.startswith("Queries: 20 for query"):
+                    in_multiple_query_20_test = True
+                if not in_multiple_query_20_test:
+                    continue
+
+            # ignore headers and 'Running' lines
+            if in_header or line.startswith("Running"):
                 continue
-            if line.startswith("Socket errors"):
-                inerror = True
-                continue
+
+            # throw out failed tests
             if (
                 line.startswith("unable to connect to")
                 or line.startswith("0 requests")
                 or line.endswith("nan%")
             ):
                 return None
+
             text_sections[section] += " " + line + ";\n"
 
     rps_parser = get_rps_and_latency_parser()
@@ -297,21 +380,46 @@ def get_rps_and_latency(filename: str) -> List[RawSummary]:
         try:
             t = rps_parser.parseString(section)
 
-            threads, connections = int(t[0][0]), int(t[0][2])
-            latavg, latstdev, latmax, latstdevrange = [no_units(e) for e in t[2][1:5]]
-            rpsavg, rpsstdev, rpsmax, rpsstdevrange = [no_units(e) for e in t[3][1:5]]
-            lat50, lat75, lat90, lat99 = [no_units(e[1]) for e in t[5:9]]
-            req_count, over_sec, mb_read = (
-                int(t[9][0]),
-                1e-3 * no_units(t[9][2]),
-                no_units(t[9][4]),
-            )
-            non2xx = 0
-            if t[10][0] == "Non-2xx or 3xx responses:":
-                non2xx = int(t[10][1])
+            threads = int(t["TestCounts"]["ThreadCount"])
+            connections = int(t["TestCounts"]["ConnectionCount"])
+            latavg = no_units(t["LatencySummary"]["Avg"])
+            latstdev = no_units(t["LatencySummary"]["Stdev"])
+            latmax = no_units(t["LatencySummary"]["Max"])
+            latstdevrange = no_units(t["LatencySummary"]["StdevRange"])
+            rpsavg = no_units(t["ReqSecSummary"]["Avg"])
+            rpsstdev = no_units(t["ReqSecSummary"]["Stdev"])
+            rpsmax = no_units(t["ReqSecSummary"]["Max"])
+            rpsstdevrange = no_units(t["ReqSecSummary"]["StdevRange"])
+            lat50 = no_units(t["Latency50"]["Time"])
+            lat75 = no_units(t["Latency75"]["Time"])
+            lat90 = no_units(t["Latency90"]["Time"])
+            lat99 = no_units(t["Latency99"]["Time"])
+            req_count = int(t["OverTime"]["RequestCount"])
+            over_sec = 1e-3 * no_units(t["OverTime"]["OverSeconds"])
+            mb_read = no_units(t["OverTime"]["BytesRead"])
+            requests_per_sec = float(t["ReqSecLine"]["RequestsPerSec"])
+            megabytes_per_sec = no_units(t["BytesReadLine"]["BytesReadPerSec"])
+            starttime = float(t["StartEndTime"]["StartTime"])
+            endtime = float(t["StartEndTime"]["EndTime"])
 
-            requests_per_sec, megabytes_per_sec = float(t[-3][1]), no_units(t[-2][1])
-            starttime, endtime = float(t[-1][1]), float(t[-1][4])
+            non2xx = 0
+            if "Non2xx" in t:
+                non2xx = int(t["Non2xx"][0]["Non2xxCount"])
+
+            socket_error_count = 0
+            if "SocketErrors" in t:
+                serrs = t["SocketErrors"][0]
+                socket_error_count = (
+                    int(serrs["ConnectCount"])
+                    + int(serrs["ReadCount"])
+                    + int(serrs["WriteCount"])
+                    + int(serrs["TimeoutCount"])
+                )
+
+            # throw out any tests with over 0.5% socket error
+            if socket_error_count > req_count * 0.005:
+                print(f"Too many socket errors for {filename}")
+                return None
 
             rps = RpsSummary(
                 requests_per_sec=requests_per_sec,
@@ -319,12 +427,14 @@ def get_rps_and_latency(filename: str) -> List[RawSummary]:
                 request_count=req_count,
                 megabytes_read=mb_read,
                 over_seconds=over_sec,
-                non_2xx_count=non2xx,
+                non_2xx_percent=100.0 * (non2xx / req_count),
                 thread_rps_mean=rpsavg,
                 thread_rps_max=rpsmax,
                 thread_rps_stdev=rpsstdev,
                 thread_rps_stdev_range=rpsstdevrange,
+                socket_error_count=socket_error_count,
             )
+
             latencies = LatencySummary(
                 lat50=lat50,
                 lat75=lat75,
