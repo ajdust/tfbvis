@@ -108,7 +108,7 @@
             height: 200px;
         }
 
-        ul {
+        #columnChecks {
             -moz-column-count: 4;
             -moz-column-gap: 10px;
             -webkit-column-count: 4;
@@ -123,11 +123,23 @@
         <div id="description" class="hidden">
             <h3>Dstat 0.7.3 TechEmpower Benchmarks</h3>
             <p>Data from TechEmpower benchmarks
-                <a href="https://tfb-status.techempower.com/">continuous benchmarking</a>.
-                <a href="https://www.techempower.com/benchmarks/">See the current benchmark here</a>,
-                and the <a href="https://github.com/TechEmpower/FrameworkBenchmarks">GitHub source here.</a>
+                <ul>
+                    <li>
+                        <a href="https://tfb-status.techempower.com/">Continuous benchmarking</a>
+                    </li>
+                    <li>
+                        <a href="https://www.techempower.com/benchmarks/">Last noted benchmark visualization</a>
+                    </li>
+                    <li>
+                        <a href="https://github.com/TechEmpower/FrameworkBenchmarks">Benchmark source</a>
+                    </li>
+                    <li>
+                        <a href="https://github.com/ajdust/tfbvis">Source for this visualization</a>
+                    </li>
+                    <li id="testrunLink">
+                    </li>
+                </ul>
             </p>
-            <p id="testrunLink"></p>
             <ul id="columnChecks"></ul>
         </div>
         <div class="filter">

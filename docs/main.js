@@ -1,16 +1,33 @@
+
+let regFilterParams = {
+    filterOptions: ['Contains', 'Regex'],
+    textCustomComparator: function (filter, value, filterText) {
+        let query = filterText.toLowerCase();
+        let source = value.toString().toLowerCase();
+        if (filter == 'Contains') {
+            return query && source.indexOf(query) >= 0;
+        } else if (filter == "Regex") {
+            try {
+                return new RegExp(query).test(source);
+            } catch {
+                return false;
+            }
+        }
+    }
+};
+
 let columnDefs = [
     {
         headerName: "Framework", field: "name",
-        filter: true, pinned: 'left', cellStyle: { textAlign: "left" },
-        tooltip: params => params.data.meta.display_name
+        pinned: 'left', cellStyle: { textAlign: "left" },
+        tooltipValueGetter: params => params.data.meta.display_name,
+        filter: true, filterParams: regFilterParams
     },
     {
         headerName: "Threads", field: "threads", hide: true
-
     },
     {
         headerName: "Connections", field: "connections", hide: true,
-
     },
     {
         headerName: "RPS (thousands of requests)", children: [
@@ -57,8 +74,13 @@ let columnDefs = [
                 filter: 'agNumberColumnFilter', hide: true
             },
             {
-                headerName: "Non 2xx count", field: "rps.non_2xx_count",
+                headerName: "% Non 2xx", field: "rps.non_2xx_percent",
                 filter: 'agNumberColumnFilter', valueFormatter: non2xxFormatter,
+                cellStyle: { color: "red" }
+            },
+            {
+                headerName: "Socket Errors", field: "rps.socket_error_count",
+                filter: 'agNumberColumnFilter', valueFormatter: errorCountFormatter,
                 cellStyle: { color: "red" }
             },
         ]
@@ -164,18 +186,41 @@ let columnDefs = [
     },
     {
         headerName: "Meta", children: [
-            { headerName: "Language", field: "meta.language", filter: true },
-            { headerName: "Platform", field: "meta.platform", filter: true },
-            { headerName: "Webserver", field: "meta.webserver", filter: true },
-            { headerName: "Classification", field: "meta.classification", filter: true },
-            { headerName: "Database", field: "meta.database", filter: true },
-            { headerName: "Orm", field: "meta.orm", filter: true },
-            { headerName: "Framework", field: "meta.framework", filter: true },
-            { headerName: "Display Name", field: "meta.display_name", filter: true, hide: true }
+            {
+                headerName: "Language", field: "meta.language", filter: true,
+                filterParams: regFilterParams
+            },
+            {
+                headerName: "Platform", field: "meta.platform", filter: true,
+                filterParams: regFilterParams
+            },
+            {
+                headerName: "Webserver", field: "meta.webserver", filter: true,
+                filterParams: regFilterParams
+            },
+            {
+                headerName: "Classification", field: "meta.classification", filter: true,
+                filterParams: regFilterParams
+            },
+            {
+                headerName: "Database", field: "meta.database", filter: true,
+                filterParams: regFilterParams
+            },
+            {
+                headerName: "Orm", field: "meta.orm", filter: true,
+                filterParams: regFilterParams
+            },
+            {
+                headerName: "Framework", field: "meta.framework", filter: true,
+                filterParams: regFilterParams
+            },
+            {
+                headerName: "Display Name", field: "meta.display_name", filter: true, hide: true,
+                filterParams: regFilterParams
+            }
         ]
     }
 ];
-
 
 let fTwoPoint = d3.format(",.2f");
 let fOnePoint = d3.format(",.1f");
@@ -193,8 +238,13 @@ function rpsFormatter(params) {
 
 function non2xxFormatter(params) {
     if (params.value <= 0) return "";
-    let v = params.value / 1e3;
-    return (v < 10 ? fTwoPoint(v) : fWhole(v));
+    let v = params.value;
+    return (v < 10 ? fOnePoint(v) : fWhole(v)) + "%";
+}
+
+function errorCountFormatter(params) {
+    if (params.value <= 0) return "";
+    return params.value;
 }
 
 function latencyFormatter(params) {
@@ -298,7 +348,7 @@ window.TFB_GRID = {
         let [environment, date, runid] = testrun.split('_');
         date = date.replace('started', '');
         let url = `https://tfb-status.techempower.com/results/${runid}`;
-        el.innerHTML = `Showing <a href="${url}">data from the ${environment} run on ${date}.</a>`;
+        el.innerHTML = `<a href="${url}">This data is from the ${environment} run on ${date}</a>`;
         TFB_GRID.loadTable();
     },
 
