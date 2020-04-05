@@ -243,13 +243,21 @@ let fTwoPoint = d3.format(",.2f");
 let fOnePoint = d3.format(",.1f");
 let fWhole = d3.format(",.0f");
 
+function roundValue(value) {
+    // round by one less than the number of digits
+    const roundFactor = Math.pow(10, Math.round(Math.log10(value) - 1.0));
+    return roundFactor * Math.round(value / roundFactor);
+}
+
 function memoryFormatter(params) {
     let v = params.value;
+    if (TFB_GRID.displayRounded) v = roundValue(v);
     return fWhole(v);
 }
 
 function rpsFormatter(params) {
     let v = params.value / 1e3;
+    if (TFB_GRID.displayRounded) v = roundValue(v);
     return (v < 10 ? fTwoPoint(v) : fWhole(v));
 }
 
@@ -265,11 +273,15 @@ function errorCountFormatter(params) {
 }
 
 function latencyFormatter(params) {
-    return fTwoPoint(params.value);
+    let v = params.value;
+    if (TFB_GRID.displayRounded) v = roundValue(v);
+    return fTwoPoint(v);
 }
 
 function cpuFormatter(params) {
-    return fOnePoint(params.value) + "%";
+    let v = params.value;
+    if (TFB_GRID.displayRounded) v = roundValue(v);
+    return fOnePoint(v) + "%";
 }
 
 function percentFormatter(params) {
@@ -363,6 +375,8 @@ window.TFB_GRID = {
     },
 
     loadTable: async function () {
+        TFB_GRID.displayRounded = document.getElementById("displayRounded").checked;
+
         let testtype = document.getElementById("testtype").value;
         let testrun = document.getElementById("testrun").value;
         let key = `data_${testrun}_${testtype}`;

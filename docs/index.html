@@ -158,6 +158,8 @@
                 <option value="update">update</option>
                 <option value="db">db</option>
             </select>
+            <label for="displayRounded" title="Display rounded values to hide minor differences">Round</label>
+            <input id="displayRounded" type="checkbox" onchange="TFB_GRID.loadTable()">
             <a id="hidedescription" onclick="document.getElementById('description').classList.toggle('hidden')">
                 <u>Toggle description</u>
             </a>
