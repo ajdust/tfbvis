@@ -290,7 +290,8 @@ function PercentBarCellRenderer() { }
 
     let percentCellRenderer = function (params) {
         let value = params.value;
-        var maxThing = 0;
+
+        let maxThing = 0;
         if (params.colDef.field.indexOf("rps.") === 0)
             maxThing = window.TFB_GRID.minMaxes.maxRps;
         else if (params.colDef.field.indexOf("latency.") === 0)
@@ -310,14 +311,6 @@ function PercentBarCellRenderer() { }
         eDivPercentBar.style.width = (percent > 100 ? "100" : percent) + "%";
         eDivPercentBar.style.backgroundColor = percent > 100
             ? "red" : (params.data.meta.color || "#cccccc");
-
-        // if (percent < 20) {
-        //     eDivPercentBar.style.backgroundColor = "#f55d51";
-        // } else if (percent < 60) {
-        //     eDivPercentBar.style.backgroundColor = "#ffb300";
-        // } else {
-        //     eDivPercentBar.style.backgroundColor = "#82d249";
-        // }
 
         let eValue = document.createElement("div");
         eValue.className = "div-percent-value";
@@ -384,9 +377,14 @@ window.TFB_GRID = {
 
         let cached = TFB_GRID[key];
         if (cached) {
+            let grid = TFB_GRID.gridOptions;
+            let sortState = grid.api.getSortModel();
+            let filterState = grid.api.getFilterModel();
             TFB_GRID.minMaxes = calculateMinMaxes(cached);
-            TFB_GRID.gridOptions.api.setRowData(cached);
-            TFB_GRID.gridOptions.api.refreshCells();
+            grid.api.setRowData(cached);
+            grid.api.refreshCells();
+            grid.api.setSortModel(sortState);
+            grid.api.setFilterModel(filterState);
             return;
         }
 
