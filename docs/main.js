@@ -50,7 +50,7 @@ let columnDefs = [
             },
             {
                 headerName: "% max RPS", field: "rps.requests_per_sec",
-                filter: false, sortable: false,
+                filter: false, sortable: false, colId: "percent_max_rps_bar",
                 cellRenderer: 'percentBarCellRenderer', width: 200
             },
             {
@@ -105,7 +105,7 @@ let columnDefs = [
             },
             {
                 headerName: "% mean 90%", field: "latency.lat90",
-                filter: false, sortable: false,
+                filter: false, sortable: false, colId: "percent_mean_90_bar",
                 cellRenderer: 'percentBarCellRenderer', width: 200
             },
             {
@@ -138,7 +138,7 @@ let columnDefs = [
             },
             {
                 headerName: "% max mean", field: "memory.mean",
-                filter: false, sortable: false,
+                filter: false, sortable: false, colId: "percent_max_mean_memory_bar",
                 cellRenderer: 'percentBarCellRenderer', width: 200
             },
             {
@@ -167,7 +167,7 @@ let columnDefs = [
             },
             {
                 headerName: "% max mean", field: "cpu.mean",
-                filter: false, sortable: false,
+                filter: false, sortable: false, colId: "percent_max_mean_cpu_bar",
                 cellRenderer: 'percentBarCellRenderer', width: 200
             },
             {
@@ -477,23 +477,29 @@ document.addEventListener("DOMContentLoaded", async function () {
     await setLanguageColors();
     TFB_GRID.changeRun();
 
-    let checks = document.getElementById("columnChecks");
-    for (let i = 1; i < columnDefs.length; i++) {
-        let columnDef = columnDefs[i];
-        if (columnDef.children) {
-            let e = document.createElement("li");
-            e.innerHTML = columnDef.headerName + ":";
-            checks.appendChild(e);
-            for (let j = 0; j < columnDef.children.length; j++) {
-                let e = document.createElement("li");
-                childColumnDef = columnDef.children[j];
-                e.innerHTML = `<input type="checkbox" data-key="${childColumnDef.field}" onchange="TFB_GRID.loadTable()" ${(childColumnDef.hide ? "" : "checked")}>${childColumnDef.headerName}</input>`;
-                checks.appendChild(e);
+    function html(el, html) {
+        let e = document.createElement(el);
+        e.innerHTML = html;
+        return e;
+    }
+
+    function appendColumnToggles(container, columns, filter) {
+        for (let column of columns) {
+            if (!filter(column)) {
+                continue;
             }
-        } else {
-            let e = document.createElement("li");
-            e.innerHTML = `<input type="checkbox" data-key="${columnDef.field}" onchange="TFB_GRID.loadTable()" ${(columnDef.hide ? "" : "checked")}>${columnDef.headerName}</input>`;
-            checks.appendChild(e);
+
+            if (column.children) {
+                container.appendChild(html("li", `${column.headerName}:`));
+                appendColumnToggles(container, column.children, filter);
+            } else {
+                container.appendChild(html("li",
+                    `<input type="checkbox" data-key="${column.colId || column.field}" onchange="TFB_GRID.loadTable()" ${(column.hide ? "" : "checked")}>${column.headerName}</input>`
+                ));
+            }
         }
     }
+
+    let checks = document.getElementById("columnChecks");
+    appendColumnToggles(checks, columnDefs, c => c.headerName != "Framework");
 });
