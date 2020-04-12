@@ -87,11 +87,11 @@ let columnDefs = [
             },
             {
                 headerName: "75%", field: "latency.lat75",
-                filter: 'agNumberColumnFilter', hide: true, valueFormatter: latencyFormatter
+                filter: 'agNumberColumnFilter', hide: false, valueFormatter: latencyFormatter
             },
             {
                 headerName: "90%", field: "latency.lat90",
-                filter: 'agNumberColumnFilter', hide: true, valueFormatter: latencyFormatter
+                filter: 'agNumberColumnFilter', hide: false, valueFormatter: latencyFormatter
             },
             {
                 headerName: "99%", field: "latency.lat99",
