@@ -24,12 +24,6 @@ let columnDefs = [
         filter: true, filterParams: regFilterParams
     },
     {
-        headerName: "Threads", field: "threads", hide: true
-    },
-    {
-        headerName: "Connections", field: "connections", hide: true,
-    },
-    {
         headerName: "RPS (thousands of requests)", children: [
             {
                 headerName: "Megabytes read", field: "rps.megabytes_read",
@@ -123,6 +117,9 @@ let columnDefs = [
             {
                 headerName: "Stdev range", field: "latency.thread_stdev_range",
                 filter: 'agNumberColumnFilter', hide: true, valueFormatter: percentFormatter
+            },
+            {
+                headerName: "Connections", field: "connections", hide: true,
             }
         ]
     },
@@ -181,6 +178,9 @@ let columnDefs = [
             {
                 headerName: "Stdev range", field: "cpu.stdev_range",
                 filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
+            },
+            {
+                headerName: "Threads", field: "threads", hide: true
             }
         ]
     },
@@ -381,7 +381,7 @@ window.TFB_GRID = {
         let testrun = document.getElementById("testrun").value;
         let key = `data_${testrun}_${testtype}`;
 
-        let colChecks = document.querySelectorAll("#columnChecks li input");
+        let colChecks = document.querySelectorAll(".column-check");
         for (let i = 0; i < colChecks.length; i++) {
             let colCheck = colChecks[i];
             let key = colCheck.getAttribute('data-key');
@@ -479,7 +479,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     function html(el, html) {
         let e = document.createElement(el);
-        e.innerHTML = html;
+        if (html) e.innerHTML = html;
         return e;
     }
 
@@ -490,16 +490,23 @@ document.addEventListener("DOMContentLoaded", async function () {
             }
 
             if (column.children) {
-                container.appendChild(html("li", `${column.headerName}:`));
-                appendColumnToggles(container, column.children, filter);
+                const listHead = html("li", `${column.headerName}`);
+                listHead.className = "column-check-head";
+
+                const el = html("ul");
+                el.className = "column-checks";
+                el.appendChild(listHead);
+
+                container.appendChild(el);
+                appendColumnToggles(el, column.children, filter);
             } else {
                 container.appendChild(html("li",
-                    `<input type="checkbox" data-key="${column.colId || column.field}" onchange="TFB_GRID.loadTable()" ${(column.hide ? "" : "checked")}>${column.headerName}</input>`
+                    `<input type="checkbox" class="column-check" data-key="${column.colId || column.field}" onchange="TFB_GRID.loadTable()" ${(column.hide ? "" : "checked")}>${column.headerName}</input>`
                 ));
             }
         }
     }
 
-    let checks = document.getElementById("columnChecks");
+    let checks = document.getElementById("columnChecksContainer");
     appendColumnToggles(checks, columnDefs, c => c.headerName != "Framework");
 });
