@@ -332,9 +332,9 @@ def get_rps_and_latency(filename: str) -> List[RawSummary]:
     with open(filename, "r") as rps_file:
         section = 0
         in_header = False
-        # the Multiple Query test only uses the 'Query: 20 for query' test
-        in_multiple_query_test = False
-        in_multiple_query_20_test = False
+        # the Multiple Query test and Update test only uses the 'Query: 20 for query' test
+        in_20_query_test = False
+        in_20_query_test_section = False
 
         for line in rps_file:
             line = line.strip()
@@ -348,13 +348,17 @@ def get_rps_and_latency(filename: str) -> List[RawSummary]:
                 continue
 
             # Ignore all query tests except the last 20-query one
-            if line.startswith("Running Primer query"):
-                in_multiple_query_test = True
-                in_multiple_query_20_test = False
-            if in_multiple_query_test:
-                if line.startswith("Queries: 20 for query"):
-                    in_multiple_query_20_test = True
-                if not in_multiple_query_20_test:
+            if line.startswith("Running Primer query") or line.startswith(
+                "Running Primer update"
+            ):
+                in_20_query_test = True
+                in_20_query_test_section = False
+            if in_20_query_test:
+                if line.startswith("Queries: 20 for query") or line.startswith(
+                    "Queries: 20 for update"
+                ):
+                    in_20_query_test_section = True
+                if not in_20_query_test_section:
                     continue
 
             # ignore headers and 'Running' lines
