@@ -69,13 +69,11 @@ let columnDefs = [
             },
             {
                 headerName: "% Non 2xx", field: "rps.non_2xx_percent",
-                filter: 'agNumberColumnFilter', valueFormatter: non2xxFormatter,
-                cellStyle: { color: "red" }
+                filter: 'agNumberColumnFilter', valueFormatter: non2xxFormatter
             },
             {
                 headerName: "Socket Errors", field: "rps.socket_error_count",
-                filter: 'agNumberColumnFilter', valueFormatter: errorCountFormatter,
-                cellStyle: { color: "red" }
+                filter: 'agNumberColumnFilter', valueFormatter: errorCountFormatter
             },
         ]
     },
