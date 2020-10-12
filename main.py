@@ -283,6 +283,8 @@ class FrameworkSummary(object):
     latency: LatencySummary = None
     memory: MemorySummary = None
     cpu: CpuSummary = None
+    usr: CpuSummary = None
+    sys: CpuSummary = None
 
 
 def no_units(nums: List[str]) -> float:
@@ -513,7 +515,15 @@ def get_memory_usage(stats: DataFrame):
     )
 
 
-def get_cpu_usage(stats: DataFrame):
+def get_cpu(stats: DataFrame):
+    usr = stats["total cpu usage", "usr"]
+    sys = stats["total cpu usage", "sys"]
+    mean = usr.mean() + sys.mean() 
+    return CpuSummary(
+        mean=mean,
+    )
+
+def get_cpu_usr(stats: DataFrame):
     cpu = stats["total cpu usage", "usr"]
     mean = cpu.mean()
     stdev = cpu.std()
@@ -527,6 +537,19 @@ def get_cpu_usage(stats: DataFrame):
         / cpu.count(),
     )
 
+def get_cpu_sys(stats: DataFrame):
+    cpu = stats["total cpu usage", "sys"]
+    mean = cpu.mean()
+    stdev = cpu.std()
+    return CpuSummary(
+        mean=mean,
+        median=cpu.median(),
+        max=cpu.max(),
+        stdev=stdev,
+        stdev_range=100
+        * cpu[cpu.between(mean - stdev, mean + stdev)].count()
+        / cpu.count(),
+    )
 
 def get_test_results(
     testdic: Dict[str, DataFrame]
@@ -554,7 +577,9 @@ def get_test_results(
             start, end = rpslat.starttime + 1, rpslat.endtime
             statframe = get_stats(paths.stats).loc[start:end]
             memory = get_memory_usage(statframe)
-            cpu = get_cpu_usage(statframe)
+            cpu_usr = get_cpu_usr(statframe)
+            cpu_sys = get_cpu_sys(statframe)
+            cpu_total = get_cpu(statframe)
             summary = FrameworkSummary(
                 name=framework,
                 threads=rpslat.threads,
@@ -562,7 +587,9 @@ def get_test_results(
                 rps=rpslat.rps,
                 latency=rpslat.latency,
                 memory=memory,
-                cpu=cpu,
+                cpu=cpu_total,
+                usr=cpu_usr,
+                sys=cpu_sys,
             )
             testresults[testtype].append(summary)
 
