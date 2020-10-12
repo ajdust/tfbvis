@@ -518,10 +518,19 @@ def get_memory_usage(stats: DataFrame):
 def get_cpu(stats: DataFrame):
     usr = stats["total cpu usage", "usr"]
     sys = stats["total cpu usage", "sys"]
-    mean = usr.mean() + sys.mean() 
+    cpu = usr + sys
+    mean = cpu.mean()
+    stdev = cpu.std()
     return CpuSummary(
         mean=mean,
+        median=cpu.median(),
+        max=cpu.max(),
+        stdev=stdev,
+        stdev_range=100
+        * cpu[cpu.between(mean - stdev, mean + stdev)].count()
+        / cpu.count(),
     )
+
 
 def get_cpu_usr(stats: DataFrame):
     cpu = stats["total cpu usage", "usr"]
@@ -537,6 +546,7 @@ def get_cpu_usr(stats: DataFrame):
         / cpu.count(),
     )
 
+
 def get_cpu_sys(stats: DataFrame):
     cpu = stats["total cpu usage", "sys"]
     mean = cpu.mean()
@@ -550,6 +560,7 @@ def get_cpu_sys(stats: DataFrame):
         * cpu[cpu.between(mean - stdev, mean + stdev)].count()
         / cpu.count(),
     )
+
 
 def get_test_results(
     testdic: Dict[str, DataFrame]
@@ -688,6 +699,7 @@ def main(args):
         path, name = args[0], args[1]
     else:
         print_help()
+        return
 
     if not os.path.isdir(path):
         print(f"'{path}' is not a directory")

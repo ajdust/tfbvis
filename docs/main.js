@@ -158,11 +158,11 @@ let columnDefs = [
             },
             {
                 headerName: "Mean", field: "sys.mean",
-                filter: 'agNumberColumnFilter', valueFormatter: cpuFormatter
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
             },
             {
                 headerName: "% max mean", field: "sys.mean",
-                filter: false, sortable: false, colId: "percent_max_mean_sys_bar",
+                filter: false, sortable: false, hide: true, colId: "percent_max_mean_sys_bar",
                 cellRenderer: 'percentBarCellRenderer', width: 200
             },
             {
@@ -176,9 +176,6 @@ let columnDefs = [
             {
                 headerName: "Stdev range", field: "sys.stdev_range",
                 filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
-            },
-            {
-                headerName: "Threads", field: "threads", hide: true
             }
         ]
     },
@@ -190,11 +187,11 @@ let columnDefs = [
             },
             {
                 headerName: "Mean", field: "usr.mean",
-                filter: 'agNumberColumnFilter', valueFormatter: cpuFormatter
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
             },
             {
                 headerName: "% max mean", field: "usr.mean",
-                filter: false, sortable: false, colId: "percent_max_mean_usr_bar",
+                filter: false, sortable: false, hide: true, colId: "percent_max_mean_usr_bar",
                 cellRenderer: 'percentBarCellRenderer', width: 200
             },
             {
@@ -209,16 +206,37 @@ let columnDefs = [
                 headerName: "Stdev range", field: "usr.stdev_range",
                 filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
             },
-            {
-                headerName: "Threads", field: "threads", hide: true
-            }
         ]
     },
     {
         headerName: "CPU (total)", children: [
             {
+                headerName: "Max", field: "cpu.max",
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
+            },
+            {
                 headerName: "Mean", field: "cpu.mean",
                 filter: 'agNumberColumnFilter', valueFormatter: cpuFormatter
+            },
+            {
+                headerName: "% max mean", field: "cpu.mean",
+                filter: false, sortable: false, colId: "percent_max_mean_cpu_bar",
+                cellRenderer: 'percentBarCellRenderer', width: 200
+            },
+            {
+                headerName: "Median", field: "cpu.median",
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
+            },
+            {
+                headerName: "Stdev", field: "cpu.stdev",
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
+            },
+            {
+                headerName: "Stdev range", field: "cpu.stdev_range",
+                filter: 'agNumberColumnFilter', hide: true, valueFormatter: cpuFormatter
+            },
+            {
+                headerName: "Threads", field: "threads", hide: true
             }
         ]
     },
@@ -352,6 +370,8 @@ function PercentBarCellRenderer() { }
             maxThing = window.TFB_GRID.minMaxes.maxUsr;
         else if (params.colDef.field.indexOf("sys.") === 0)
             maxThing = window.TFB_GRID.minMaxes.maxSys;
+        else if (params.colDef.field.indexOf("cpu.") === 0)
+            maxThing = window.TFB_GRID.minMaxes.maxCpu;
 
         let percent = maxThing <= 0 ? 0 : 100 * value / maxThing;
         let eDivPercentBarWrapper = document.createElement('div');
@@ -470,13 +490,14 @@ window.TFB_GRID = {
         }
 
         function calculateMinMaxes(fetchedData) {
-            let maxRps = 0, sumLat90 = 0, countLat90 = 0, maxMem = 0, maxSys = 0, maxUsr = 0;
+            let maxRps = 0, sumLat90 = 0, countLat90 = 0, maxMem = 0, maxCpu = 0, maxSys = 0, maxUsr = 0;
             for (let i = 0; i < fetchedData.length; i++) {
                 let fw = fetchedData[i];
                 if (fw.rps.requests_per_sec > maxRps) maxRps = fw.rps.requests_per_sec;
                 if (fw.memory.max > maxMem) maxMem = fw.memory.max;
                 if (fw.usr.max > maxUsr) maxUsr = fw.usr.max;
                 if (fw.sys.max > maxSys) maxSys = fw.sys.max;
+                if (fw.cpu.max > maxCpu) maxCpu = fw.cpu.max;
                 if (fw.latency.lat90 > 0) {
                     countLat90 += 1;
                     sumLat90 += fw.latency.lat90;
@@ -489,6 +510,7 @@ window.TFB_GRID = {
                 maxMem: maxMem,
                 maxSys: maxSys,
                 maxUsr: maxUsr,
+                maxCpu: maxCpu
             };
         }
 
