@@ -631,7 +631,6 @@ window.TFB_GRID = {
       return;
     }
 
-    // lookup from TechEmpower's tfb-lookup.js
     async function attachMeta(fetchedData) {
       let response = await fetch(`${testrun}/test_metadata.json`);
       let metadatas = await response.json();
