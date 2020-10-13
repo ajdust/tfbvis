@@ -1,13 +1,26 @@
 let regFilterParams = {
-  filterOptions: ["Contains", "Regex"],
+  filterOptions: [
+    "Contains",
+    "Does not contain",
+    "Regex test",
+    "Does not regex test",
+  ],
   textCustomComparator: function (filter, value, filterText) {
     let query = filterText.toLowerCase();
     let source = value.toString().toLowerCase();
-    if (filter == "Contains") {
+    if (filter === "Contains") {
       return query && source.indexOf(query) >= 0;
-    } else if (filter == "Regex") {
+    } else if (filter === "Does not contain") {
+      return query && source.indexOf(query) === -1;
+    } else if (filter === "Regex test") {
       try {
         return new RegExp(query).test(source);
+      } catch {
+        return false;
+      }
+    } else if (filter == "Does not regex test") {
+      try {
+        return !new RegExp(query).test(source);
       } catch {
         return false;
       }
