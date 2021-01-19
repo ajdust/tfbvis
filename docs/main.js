@@ -611,16 +611,8 @@ window.TFB_GRID = {
     let testrun = document.getElementById("testrun").value;
     let [environment, date, runid] = testrun.split("_");
     date = date.replace("started", "");
-
-    // TODO: remove temporary data URL for Round 20 when tfb-status.techempower.com is back up
-    if (runid === "Round20") {
-      let url = `https://tfb-logs.techempower.com/Round%2020/citrine-results/20201229183947`;
-      el.innerHTML = `<a href="${url}">Tentative data from the ${environment} run on ${date}</a>`;
-    } else {
-      let url = `https://tfb-status.techempower.com/results/${runid}`;
-      el.innerHTML = `<a href="${url}">This data is from the ${environment} run on ${date}</a>`;
-    }
-
+    let url = `https://tfb-status.techempower.com/results/${runid}`;
+    el.innerHTML = `<a href="${url}">This data is from the ${environment} run on ${date}</a>`;
     TFB_GRID.loadTable();
   },
 
