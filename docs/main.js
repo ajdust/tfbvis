@@ -634,12 +634,15 @@ window.TFB_GRID = {
     let cached = TFB_GRID[key];
     if (cached) {
       let grid = TFB_GRID.gridOptions;
-      let sortState = grid.api.getSortModel();
+      let sortState = grid.columnApi.getColumnState();
       let filterState = grid.api.getFilterModel();
       TFB_GRID.minMaxes = calculateMinMaxes(cached);
       grid.api.setRowData(cached);
       grid.api.refreshCells();
-      grid.api.setSortModel(sortState);
+      grid.columnApi.applyColumnState({
+        state: sortState,
+        applyOrder: true,
+      });
       grid.api.setFilterModel(filterState);
       return;
     }
