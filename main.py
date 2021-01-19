@@ -68,7 +68,7 @@ def start(args):
             content = f.read()
             paths = simplejson.loads(content)
             paths.append(name)
-            new_paths = simplejson.dumps(list(set(paths)))
+            new_paths = simplejson.dumps(sorted(list(set(paths))))
             f.seek(0)
             f.write(new_paths)
             f.truncate()
@@ -82,7 +82,15 @@ class TestFiles(object):
 
 
 def get_test_result_files(root: str) -> Dict[str, DataFrame]:
-    allowed_test_types = {"db", "fortune", "json", "plaintext", "query", "update"}
+    allowed_test_types = {
+        "db",
+        "fortune",
+        "json",
+        "plaintext",
+        "query",
+        "update",
+        "cached-query",
+    }
     allowed_file_names = {"verification.txt", "stats.txt", "raw.txt"}
     files = DataFrame(
         (
@@ -334,9 +342,10 @@ def get_rps_and_latency(filename: str) -> List[RawSummary]:
     with open(filename, "r") as rps_file:
         section = 0
         in_header = False
-        # the Multiple Query test and Update test only uses the 'Query: 20 for query' test
-        in_20_query_test = False
-        in_20_query_test_section = False
+        # the Multiple Query and Update tests use the 'Query: 20' sample
+        # the Cached Query test uses the 'Query: 100' sample
+        in_targeted_sample = False
+        in_targeted_sample_section = False
 
         for line in rps_file:
             line = line.strip()
@@ -349,18 +358,22 @@ def get_rps_and_latency(filename: str) -> List[RawSummary]:
                 text_sections[section] = ""
                 continue
 
-            # Ignore all query tests except the last 20-query one
-            if line.startswith("Running Primer query") or line.startswith(
-                "Running Primer update"
+            # ignore all query tests except the last 20-query one
+            if (
+                line.startswith("Running Primer query")
+                or line.startswith("Running Primer update")
+                or line.startswith("Running Primer cached-query")
             ):
-                in_20_query_test = True
-                in_20_query_test_section = False
-            if in_20_query_test:
-                if line.startswith("Queries: 20 for query") or line.startswith(
-                    "Queries: 20 for update"
+                in_targeted_sample = True
+                in_targeted_sample_section = False
+            if in_targeted_sample:
+                if (
+                    line.startswith("Queries: 20 for query")
+                    or line.startswith("Queries: 20 for update")
+                    or line.startswith("Queries: 100 for cached-query")
                 ):
-                    in_20_query_test_section = True
-                if not in_20_query_test_section:
+                    in_targeted_sample_section = True
+                if not in_targeted_sample_section:
                     continue
 
             # ignore headers and 'Running' lines
@@ -680,8 +693,8 @@ def download_results(url):
 
 def print_help():
     print(
-        "Required arguments: "
-        + "\n- URL to the status page of a run at https://tfb-status.techempower.com/"
+        "Required arguments (choose one):"
+        + "\n- HTTPS URL to the results page of a run at https://tfb-status.techempower.com/"
         + "\n- Existing directory path followed by a name of your choice for results"
     )
 
