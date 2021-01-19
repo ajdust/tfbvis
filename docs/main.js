@@ -606,6 +606,14 @@ window.TFB_GRID = {
     },
   },
 
+  setUrlParams: function (testrun, testtype, round) {
+    const url = new URL(window.location);
+    url.searchParams.set("testrun", testrun);
+    url.searchParams.set("testtype", testtype);
+    url.searchParams.set("round", round ? "true" : "false");
+    window.history.replaceState(null, null, "?" + url.searchParams.toString());
+  },
+
   changeRun: function () {
     let el = document.getElementById("testrunLink");
     let testrun = document.getElementById("testrun").value;
@@ -617,11 +625,13 @@ window.TFB_GRID = {
   },
 
   loadTable: async function () {
-    TFB_GRID.displayRounded = document.getElementById("displayRounded").checked;
-
+    let displayRounded = document.getElementById("displayRounded").checked;
     let testtype = document.getElementById("testtype").value;
     let testrun = document.getElementById("testrun").value;
     let key = `data_${testrun}_${testtype}`;
+
+    TFB_GRID.displayRounded = displayRounded;
+    TFB_GRID.setUrlParams(testrun, testtype, displayRounded);
 
     let colChecks = document.querySelectorAll(".column-check");
     for (let i = 0; i < colChecks.length; i++) {
@@ -733,12 +743,51 @@ async function setLanguageGithub() {
   window.getLanguageGithub = (lang) => window.LANGUAGE_GITHUB[lang];
 }
 
+function applyUrlParams() {
+  const url = new URL(window.location);
+  const testrun = url.searchParams.get("testrun");
+  if (testrun) {
+    const testrunOption = document.querySelector(
+      `#testrun option[value='${testrun.replace("'", '"')}']`
+    );
+    if (testrunOption) {
+      testrunOption.selected = true;
+    }
+  }
+
+  const testtype = url.searchParams.get("testtype");
+  if (testtype) {
+    const testtypeOption = document.querySelector(
+      `#testtype option[value='${testtype.replace("'", '"')}']`
+    );
+    if (testtypeOption) {
+      testtypeOption.selected = true;
+    }
+  }
+
+  const round = url.searchParams.get("round");
+  if (round === "true") {
+    document.getElementById("displayRounded").checked = true;
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async function () {
   let gridDiv = document.querySelector("#myGrid");
   new agGrid.Grid(gridDiv, TFB_GRID.gridOptions);
   await setLanguageColors();
   await setLanguageGithub();
+  applyUrlParams();
   TFB_GRID.changeRun();
+
+  document
+    .getElementById("testrun")
+    .addEventListener("change", TFB_GRID.changeRun);
+  document
+    .getElementById("testtype")
+    .addEventListener("change", TFB_GRID.loadTable);
+  document
+    .getElementById("displayRounded")
+    .addEventListener("change", TFB_GRID.loadTable);
 
   function html(el, html) {
     let e = document.createElement(el);

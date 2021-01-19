@@ -140,7 +140,7 @@
         </div>
         <div class="filter">
             <label for="testrun">Run:</label>
-            <select id="testrun" onchange="TFB_GRID.changeRun()">
+            <select id="testrun">
                 <option value="Citrine_started2021-01-13_3e8b131d-0f8b-40db-babe-eea7774b9e0b">
                     Citrine 2021-01-13</option>
                 <option selected value="Citrine_started2020-12-29_f78282e3-ed37-4e7c-9862-3163de23b23b">
@@ -155,7 +155,7 @@
                     Citrine 2020-3-16</option>
             </select>
             <label for="testtype">Test:</label>
-            <select id="testtype" onchange="TFB_GRID.loadTable()">
+            <select id="testtype">
                 <option value="plaintext">plaintext</option>
                 <option value="json">json</option>
                 <option value="fortune" selected>fortune</option>
@@ -165,7 +165,7 @@
                 <option value="cached-query">cached-query</option>
             </select>
             <label for="displayRounded" title="Display rounded values to hide minor differences">Round</label>
-            <input id="displayRounded" type="checkbox" onchange="TFB_GRID.loadTable()">
+            <input id="displayRounded" type="checkbox">
             <a id="hidedescription" onclick="document.getElementById('description').classList.toggle('hidden')">
                 <u>Toggle description</u>
             </a>
