@@ -25,6 +25,6 @@ Continuous benchmarking means new benchmark results appear every few days. If yo
   - Use a directory with results already available. For instance: `python3 ./main.py ./cache/{path} {environment-name}_{run-date}_{run-id}`
 
 - After the run is processed it will appear in the `docs` directory:
-  - Add it to the `<select id="testrun">` dropdown in `index.html` with n `<option>` value matching the directory name as it appears in the `docs` directory
+  - Add it to the `<select id="testrun">` dropdown in `index.html` with an `<option>` value matching the directory name as it appears in the `docs` directory
   - `cd` to `docs` and launch `./pyserv.sh`
   - Browse to `http://localhost:8000` to see the results
