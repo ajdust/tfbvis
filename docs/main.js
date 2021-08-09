@@ -30,6 +30,14 @@ let regFilterParams = {
 
 let columnDefs = [
   {
+    colId: "rowNumber",
+    headerName: "#",
+    pinned: "left",
+    valueGetter: (params) => params.node.rowIndex + 1,
+    hide: true,
+    width: 44,
+  },
+  {
     headerName: "Framework",
     field: "name",
     pinned: "left",
@@ -601,6 +609,13 @@ window.TFB_GRID = {
       cellStyle: { textAlign: "right" },
     },
     columnDefs: columnDefs,
+    onFilterChanged: () => {
+      // the rowNumber is sometimes out of date after a filter, so force refresh it here
+      const rn = TFB_GRID.gridOptions.columnApi.getColumn("rowNumber");
+      if (rn && rn.visible) {
+        TFB_GRID.gridOptions.api.refreshCells({ columns: ["rowNumber"] });
+      }
+    },
     components: {
       percentBarCellRenderer: PercentBarCellRenderer,
     },
@@ -788,6 +803,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   document
     .getElementById("displayRounded")
     .addEventListener("change", TFB_GRID.loadTable);
+  document
+    .getElementById("displayRowNumber")
+    .addEventListener("change", TFB_GRID.loadTable);
 
   function html(el, html) {
     let e = document.createElement(el);
@@ -827,5 +845,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   let checks = document.getElementById("columnChecksContainer");
-  appendColumnToggles(checks, columnDefs, (c) => c.headerName != "Framework");
+  appendColumnToggles(
+    checks,
+    columnDefs,
+    (c) => c.headerName != "Framework" && c.headerName != "#"
+  );
 });
