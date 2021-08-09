@@ -27,7 +27,7 @@
         }
 
         #myGrid {
-            margin-top: 20px;
+            margin-top: 10px;
             height: 95%;
             width: 100%
         }
@@ -115,6 +115,19 @@
             font-weight: bold;
             padding-bottom: 5px;
         }
+
+        .filter label {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .filter input[type=checkbox] {
+            flex: none;
+        }
+
+        .filter .spacer {
+            display: inline-block;
+        }
     </style>
 
     <div class="content">
@@ -139,38 +152,43 @@
             <div id="columnChecksContainer" class="column-checks-container"></div>
         </div>
         <div class="filter">
-            <label for="testrun">Run:</label>
-            <select id="testrun">
-                <option value="Citrine_started2021-07-26_7119680b-b6ae-4401-9ec8-8a0767214990">
-                    Citrine 2021-07-26</option>
-                <option value="Citrine_started2021-01-13_3e8b131d-0f8b-40db-babe-eea7774b9e0b">
-                    Citrine 2021-01-13</option>
-                <option selected value="Citrine_started2020-12-29_f78282e3-ed37-4e7c-9862-3163de23b23b">
-                    Citrine 2020-12-29 (Round 20)</option>
-                <option value="Citrine_started2020-10-06_9716e3cd-9e53-433c-b6c5-d2c48c9593c1">
-                    Citrine 2020-10-06</option>
-                <option value="Citrine_started2020-05-09_4c536195-90ff-40b8-8636-a719318a864b">
-                    Citrine 2020-05-09 (Round 19)</option>
-                <option value="Azure_started2020-03-17_5bc93dbb-7aa6-49a1-ab39-a2d36106beb9">
-                    Azure 2020-03-17</option>
-                <option value="Citrine_started2020-03-16_71407829-eaa7-4b5d-a6a2-54b8ba3b2d3f">
-                    Citrine 2020-03-16</option>
-            </select>
-            <label for="testtype">Test:</label>
-            <select id="testtype">
-                <option value="plaintext">plaintext</option>
-                <option value="json">json</option>
-                <option value="fortune" selected>fortune</option>
-                <option value="query">query (multiple)</option>
-                <option value="update">update</option>
-                <option value="db">db (single query)</option>
-                <option value="cached-query">cached-query</option>
-            </select>
-            <label for="displayRounded" title="Display rounded values to hide minor differences">Round</label>
-            <input id="displayRounded" type="checkbox">
+            <label for="testrun">Run&nbsp;
+                <select id="testrun">
+                    <option value="Citrine_started2021-07-26_7119680b-b6ae-4401-9ec8-8a0767214990">
+                        Citrine 2021-07-26</option>
+                    <option value="Citrine_started2021-01-13_3e8b131d-0f8b-40db-babe-eea7774b9e0b">
+                        Citrine 2021-01-13</option>
+                    <option selected value="Citrine_started2020-12-29_f78282e3-ed37-4e7c-9862-3163de23b23b">
+                        Citrine 2020-12-29 (Round 20)</option>
+                    <option value="Citrine_started2020-10-06_9716e3cd-9e53-433c-b6c5-d2c48c9593c1">
+                        Citrine 2020-10-06</option>
+                    <option value="Citrine_started2020-05-09_4c536195-90ff-40b8-8636-a719318a864b">
+                        Citrine 2020-05-09 (Round 19)</option>
+                    <option value="Azure_started2020-03-17_5bc93dbb-7aa6-49a1-ab39-a2d36106beb9">
+                        Azure 2020-03-17</option>
+                    <option value="Citrine_started2020-03-16_71407829-eaa7-4b5d-a6a2-54b8ba3b2d3f">
+                        Citrine 2020-03-16</option>
+                </select>
+            </label>
+            <label for="testtype">Test&nbsp;
+                <select id="testtype">
+                    <option value="plaintext">plaintext</option>
+                    <option value="json">json</option>
+                    <option value="fortune" selected>fortune</option>
+                    <option value="query">query (multiple)</option>
+                    <option value="update">update</option>
+                    <option value="db">db (single query)</option>
+                    <option value="cached-query">cached-query</option>
+                </select>
+            </label>
+            <label for="displayRounded" title="Display rounded values to hide minor differences">Round
+                <input id="displayRounded" type="checkbox">
+            </label>
+            <span class="spacer"></span>
             <label for="displayRowNumber" title="Display the row number">Row
                 <input class="column-check" data-key="rowNumber" id="displayRowNumber" type="checkbox">
             </label>
+            <span class="spacer"></span>
             <a id="hidedescription" onclick="document.getElementById('description').classList.toggle('hidden')">
                 <u>Toggle description</u>
             </a>
