@@ -588,7 +588,7 @@ def get_test_results(
             if not get_verification(paths.verification):
                 continue
             if not os.path.exists(paths.stats) or not os.path.exists(paths.raw):
-                continue;
+                continue
 
             rpslats = get_rps_and_latency(paths.raw)
             if rpslats is None or len(rpslats) == 0:
