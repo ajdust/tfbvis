@@ -1,4 +1,5 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
     <meta charset="utf-8" />
@@ -7,12 +8,17 @@
     <script src="https://d3js.org/d3-format.v1.min.js"></script>
     <script src="main.js"></script>
 
-</head>
-
-<body>
     <style>
-        body {
+        html, body {
             background-color: #ebebeb;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         #description {
@@ -26,9 +32,16 @@
             margin-left: 5px;
         }
 
+        .content {
+            padding: 10px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
         #myGrid {
             margin-top: 10px;
-            height: 95%;
+            flex-grow: 1;
             width: 100%
         }
 
@@ -129,7 +142,9 @@
             display: inline-block;
         }
     </style>
+</head>
 
+<body>
     <div class="content">
         <div id="description" class="hidden">
             <h3>Dstat 0.7.3 TechEmpower Benchmarks</h3>
