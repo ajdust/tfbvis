@@ -619,6 +619,10 @@ window.TFB_GRID = {
     components: {
       percentBarCellRenderer: PercentBarCellRenderer,
     },
+    onGridReady: (grid) => {
+      // default to less than 5% socket error
+      grid.api.setFilterModel({"rps.non_2xx_percent":{"filterType":"number","type":"lessThan","filter":5}});
+    }
   },
 
   setUrlParams: function (testrun, testtype, round) {
