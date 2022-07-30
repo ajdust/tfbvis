@@ -421,7 +421,7 @@ let columnDefs = [
           const meta = params.data.meta;
           if (!meta.language) return params.value;
           let gh = window.getLanguageGithub(meta.language);
-          return `<a href="${gh}">${params.value}</a>`;
+          return `<a href="${gh}" target="_blank">${params.value}</a>`;
         },
       },
       {
@@ -435,7 +435,7 @@ let columnDefs = [
             q: `${params.value} stars:>10 language:${params.data.meta.language}`,
           });
           const github = `https://github.com/search?${query}`;
-          return `<a href="${github}">${params.value}</a>`;
+          return `<a href="${github}" target="_blank">${params.value}</a>`;
         },
       },
       {
@@ -471,7 +471,7 @@ let columnDefs = [
           const meta = params.data.meta;
           if (!meta.language || meta.framework === "none") return params.value;
           const gh = window.getLanguageGithub(meta.language);
-          return `<a href="${gh}/${meta.framework}">${params.value}</a>`;
+          return `<a href="${gh}/${meta.framework}" target="_blank">${params.value}</a>`;
         },
       },
       {
