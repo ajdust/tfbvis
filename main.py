@@ -667,7 +667,7 @@ def download_results(url):
 
     relative_path = match.group(1)
     uparse = urlparse(url)
-    download_url = f"{uparse.scheme}://{uparse.netloc}/{relative_path}"
+    download_url = f"{uparse.scheme}://{uparse.netloc}{relative_path}"
 
     name = f"{environment}_{started_date}_{runid}"
     results_dir = os.path.join("cache", name)
