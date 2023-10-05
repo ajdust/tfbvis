@@ -501,11 +501,18 @@ def get_stats(filename: str):
         header2 = map(lambda x: x.strip('"'), csv.readline().strip().split(","))
 
     names = []
+    existing = [] # Workaround duplicate header names that read_csv forbids
     for h1, h2 in zip(header1, header2):
         if h1:
             lasth1 = h1
+            if (h1 + h2) in existing:
+                h2 += "+";
+            existing.append(h1 + h2)
             names.append((h1, h2))
         else:
+            if (lasth1 + h2) in existing:
+                h2 += "+";
+            existing.append(lasth1 + h2)
             names.append((lasth1, h2))
 
     names[0] = "epoch"
@@ -601,7 +608,11 @@ def get_test_results(
             # Using only data from the fastest 15 second measurement
             # Add one second to starttime to allow framework to ramp up cpu/memory
             start, end = rpslat.starttime + 1, rpslat.endtime
-            statframe = get_stats(paths.stats).loc[start:end]
+            statframe_try = get_stats(paths.stats)
+            if statframe_try.empty:
+                continue
+
+            statframe = statframe_try.loc[start:end]
             memory = get_memory_usage(statframe)
             cpu_usr = get_cpu_usr(statframe)
             cpu_sys = get_cpu_sys(statframe)
