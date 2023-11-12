@@ -6,7 +6,7 @@ entrypoints==0.3
 flake8==3.7.9
 funcparserlib==0.3.6
 mccabe==0.6.1
-numpy==1.17.4
+numpy==1.22.0
 pandas==0.25.3
 pathspec==0.6.0
 pycodestyle==2.5.0
